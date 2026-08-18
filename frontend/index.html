@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>高校学生事务智能问答系统</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/element-plus@2.8.4/dist/index.css">
+<style>
+[v-cloak] { display: none; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  background: #f0f4fa;
+  color: #33415c;
+}
+
+/* ---------- 登录/注册页 ---------- */
+.auth-page {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #dbe9ff 0%, #f6faff 55%, #e8f2ff 100%);
+}
+.auth-card {
+  width: 400px; background: #fff; border-radius: 14px;
+  padding: 36px 32px 28px; box-shadow: 0 8px 30px rgba(31, 91, 190, .12);
+}
+.auth-logo {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  color: #1f5fbe; font-size: 19px; font-weight: 600; margin-bottom: 24px;
+}
+.auth-tabs { display: flex; border-bottom: 2px solid #eef1f6; margin-bottom: 22px; }
+.auth-tab {
+  flex: 1; text-align: center; padding: 10px 0 12px; cursor: pointer;
+  color: #7a8699; font-size: 15px; position: relative; transition: color .2s;
+}
+.auth-tab.active { color: #1f5fbe; font-weight: 600; }
+.auth-tab.active::after {
+  content: ''; position: absolute; left: 35%; right: 35%; bottom: -2px;
+  height: 2px; background: #1f5fbe; border-radius: 2px;
+}
+.auth-field { margin-bottom: 16px; }
+.auth-btn { width: 100%; margin-top: 6px; }
+.auth-tip { margin-top: 18px; text-align: center; color: #98a3b3; font-size: 13px; }
+.auth-tip a { color: #1f5fbe; cursor: pointer; margin-left: 4px; }
+
+/* ---------- 聊天页 ---------- */
+.chat-page { height: 100vh; display: flex; flex-direction: column; }
+.topbar {
+  height: 56px; background: #fff; border-bottom: 1px solid #e6ebf2;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 20px; flex-shrink: 0;
+}
+.brand { display: flex; align-items: center; gap: 8px; color: #1f5fbe; font-size: 16px; font-weight: 600; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.username { color: #5a6b85; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+
+.chat-body { flex: 1; display: flex; min-height: 0; }
+
+/* 左侧会话列表 */
+.side {
+  width: 260px; background: #fff; border-right: 1px solid #e6ebf2;
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+.side-header { padding: 14px; border-bottom: 1px solid #f0f3f8; }
+.new-btn { width: 100%; }
+.session-list { flex: 1; overflow-y: auto; padding: 8px; }
+.session-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 12px; border-radius: 8px; cursor: pointer;
+  color: #41506a; font-size: 14px; margin-bottom: 2px; transition: background .15s;
+}
+.session-item:hover { background: #f2f6fc; }
+.session-item.active { background: #e8f1ff; color: #1f5fbe; font-weight: 600; }
+.session-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
+.session-del { color: #b6c2d2; flex-shrink: 0; }
+.session-del:hover { color: #f56c6c; }
+.session-empty { text-align: center; color: #b6c2d2; padding: 40px 0; font-size: 13px; }
+
+/* 右侧聊天区 */
+.chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #f5f8fd; }
+.messages { flex: 1; overflow-y: auto; padding: 24px 0; }
+.msg-row { display: flex; gap: 10px; margin: 0 auto 20px; max-width: 860px; padding: 0 24px; }
+.msg-row.user { flex-direction: row-reverse; }
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: #1f5fbe; color: #fff;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.msg-row.user .avatar { background: #8ab4e8; }
+.bubble-wrap { max-width: 76%; display: flex; flex-direction: column; }
+.msg-row.user .bubble-wrap { align-items: flex-end; }
+.bubble {
+  padding: 11px 15px; border-radius: 12px; font-size: 14.5px; line-height: 1.65;
+  word-break: break-word; white-space: pre-wrap;
+}
+.bubble.user { background: #1f5fbe; color: #fff; border-top-right-radius: 3px; }
+.bubble.assistant { background: #fff; color: #33415c; border: 1px solid #e6ebf2; border-top-left-radius: 3px; }
+.thinking { color: #98a3b3; font-style: italic; }
+.cursor { animation: blink .9s infinite; color: #1f5fbe; }
+@keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+.sources {
+  margin-top: 6px; font-size: 12px; color: #98a3b3;
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+}
+.source-tag { background: #eef3fb; color: #5a7cb5; padding: 1px 8px; border-radius: 10px; }
+.welcome { text-align: center; padding-top: 22vh; color: #b6c2d2; }
+.welcome p { margin-top: 14px; font-size: 14px; }
+
+/* 输入区 */
+.input-area { border-top: 1px solid #e6ebf2; background: #fff; padding: 14px 24px 18px; }
+.input-area .el-textarea { max-width: 860px; margin: 0 auto; display: block; }
+.input-footer {
+  max-width: 860px; margin: 10px auto 0;
+  display: flex; align-items: center; justify-content: flex-end; gap: 14px;
+}
+.hint { color: #b6c2d2; font-size: 12px; }
+
+/* ---------- 管理后台 ---------- */
+.admin-panel {
+  position: fixed; inset: 0; background: #f0f4fa; z-index: 50;
+  padding: 28px; overflow-y: auto;
+}
+.admin-card {
+  max-width: 1080px; margin: 0 auto; background: #fff;
+  border-radius: 12px; padding: 22px 28px 28px;
+  box-shadow: 0 6px 24px rgba(31, 91, 190, .10);
+}
+.admin-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.admin-title { color: #1f5fbe; font-size: 17px; font-weight: 600; display: flex; align-items: center; }
+.admin-tabs .el-upload { width: 100%; }
+.admin-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 14px 0;
+}
+.admin-empty { text-align: center; color: #b6c2d2; padding: 50px 0; font-size: 14px; }
+.hotword-cloud { display: flex; flex-wrap: wrap; gap: 12px; padding: 6px 0 4px; }
+</style>
+</head>
+<body>
+<div id="app" v-cloak>
+
+  <!-- ==================== 登录 / 注册 ==================== -->
+  <div v-if="!loggedIn" class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <el-icon :size="28"><chat-dot-round /></el-icon>
+        <span>高校学生事务智能问答系统</span>
+      </div>
+      <div class="auth-tabs">
+        <div :class="['auth-tab', authMode === 'login' && 'active']" @click="authMode = 'login'">登 录</div>
+        <div :class="['auth-tab', authMode === 'register' && 'active']" @click="authMode = 'register'">注 册</div>
+      </div>
+      <el-input v-model="authForm.username" placeholder="用户名" size="large" class="auth-field" @keydown.enter="doAuth">
+        <template #prefix><el-icon><user /></el-icon></template>
+      </el-input>
+      <el-input v-model="authForm.password" type="password" placeholder="密码" size="large"
+                class="auth-field" show-password @keydown.enter="doAuth">
+        <template #prefix><el-icon><key /></el-icon></template>
+      </el-input>
+      <el-input v-if="authMode === 'register'" v-model="authForm.confirm" type="password" placeholder="确认密码"
+                size="large" class="auth-field" show-password @keydown.enter="doAuth">
+        <template #prefix><el-icon><key /></el-icon></template>
+      </el-input>
+      <el-button type="primary" size="large" class="auth-btn" :loading="authLoading" @click="doAuth">
+        {{ authMode === 'login' ? '登 录' : '注 册' }}
+      </el-button>
+      <div class="auth-tip">
+        {{ authMode === 'login' ? '还没有账号？' : '已有账号？' }}
+        <a @click="authMode = authMode === 'login' ? 'register' : 'login'">
+          {{ authMode === 'login' ? '去注册' : '去登录' }}
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 聊天页 ==================== -->
+  <div v-else class="chat-page">
+    <header class="topbar">
+      <div class="brand">
+        <el-icon :size="20"><chat-dot-round /></el-icon>
+        <span>高校学生事务智能问答系统</span>
+      </div>
+      <div class="topbar-right">
+        <el-button v-if="isAdmin" :type="adminView ? 'primary' : 'default'" @click="toggleAdmin">
+          <el-icon><setting /></el-icon>&nbsp;管理后台
+        </el-button>
+        <span class="username"><el-icon><user /></el-icon>{{ username }}</span>
+        <el-button text @click="logout">
+          <el-icon><switch-button /></el-icon>&nbsp;退出登录
+        </el-button>
+      </div>
+    </header>
+
+    <div class="chat-body">
+      <!-- 左侧会话列表 -->
+      <aside class="side">
+        <div class="side-header">
+          <el-button type="primary" class="new-btn" @click="newSession">
+            <el-icon><plus /></el-icon>&nbsp;新建会话
+          </el-button>
+        </div>
+        <div class="session-list">
+          <div v-for="s in sessions" :key="s.id"
+               :class="['session-item', s.id === currentSessionId && 'active']"
+               @click="switchSession(s.id)">
+            <div class="session-title">{{ s.title }}</div>
+            <el-icon class="session-del" @click.stop="deleteSession(s.id)"><delete /></el-icon>
+          </div>
+          <div v-if="!sessions.length" class="session-empty">暂无会话，点击上方按钮开始提问</div>
+        </div>
+      </aside>
+
+      <!-- 右侧聊天区 -->
+      <main class="chat-area">
+        <div class="messages" ref="messagesEl">
+          <div v-if="!currentSessionId" class="welcome">
+            <el-icon :size="48" color="#c0c4cc"><chat-dot-round /></el-icon>
+            <p>开始提问吧！支持图书馆、宿舍、食堂等校园事务咨询</p>
+          </div>
+          <template v-for="(m, i) in messages" :key="i">
+            <div :class="['msg-row', m.role]">
+              <div class="avatar">
+                <el-icon v-if="m.role === 'assistant'"><chat-dot-round /></el-icon>
+                <el-icon v-else><user /></el-icon>
+              </div>
+              <div class="bubble-wrap">
+                <div :class="['bubble', m.role]"><span v-if="m.typing && !m.content" class="thinking">正在思考…</span>{{ m.content || (m.typing ? '' : ' ') }}<span v-if="m.typing" class="cursor">▍</span></div>
+                <div v-if="m.role === 'assistant' && !m.typing && m.sources && m.sources.length" class="sources">
+                  <el-icon><document /></el-icon>
+                  <span>来源：</span>
+                  <span v-for="(s, j) in m.sources" :key="j" class="source-tag">{{ s }}</span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="input-area">
+          <el-input v-model="inputText" type="textarea" :rows="3" resize="none"
+                    placeholder="输入你的问题，Enter 发送，Shift+Enter 换行"
+                    @keydown.enter.exact.prevent="send" />
+          <div class="input-footer">
+            <span class="hint">回答基于知识库生成，仅供参考</span>
+            <el-button type="primary" :loading="sending" :disabled="sending" @click="send">
+              <el-icon v-if="!sending"><promotion /></el-icon>&nbsp;发送
+            </el-button>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- ==================== 管理后台 ==================== -->
+    <div v-if="adminView" class="admin-panel">
+      <div class="admin-card">
+        <div class="admin-header">
+          <span class="admin-title"><el-icon><setting /></el-icon>&nbsp;管理后台</span>
+          <el-button text @click="adminView = ''">
+            <el-icon><close /></el-icon>&nbsp;返回聊天
+          </el-button>
+        </div>
+
+        <el-tabs v-model="adminView" class="admin-tabs">
+          <el-tab-pane label="文档管理" name="docs">
+            <el-upload drag :show-file-list="false" accept=".pdf,.txt,.docx"
+                       :http-request="uploadDoc" :disabled="rebuildLoading">
+              <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+              <div class="el-upload__text">将 PDF / TXT / DOCX 拖到此处，或<em>点击上传</em></div>
+            </el-upload>
+            <div class="admin-actions">
+              <span class="hint">上传的文档需重建索引后才会参与问答</span>
+              <el-button type="warning" :loading="rebuildLoading" @click="rebuildIndex">
+                <el-icon v-if="!rebuildLoading"><refresh-right /></el-icon>&nbsp;重建索引
+              </el-button>
+            </div>
+            <el-table :data="adminDocs" v-loading="adminDocsLoading" empty-text="暂无文档">
+              <el-table-column prop="id" label="ID" width="70" />
+              <el-table-column prop="filename" label="文件名" show-overflow-tooltip />
+              <el-table-column prop="status" label="状态" width="120">
+                <template #default="{ row }">
+                  <el-tag :type="row.status === 'indexed' ? 'success' : 'info'">{{ row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="created_at" label="上传时间" width="190" />
+              <el-table-column label="操作" width="120">
+                <template #default="{ row }">
+                  <el-button size="small" type="danger" @click="deleteDoc(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <el-tab-pane label="用户管理" name="users">
+            <el-table :data="adminUsers" v-loading="adminUsersLoading" empty-text="暂无用户">
+              <el-table-column prop="id" label="ID" width="70" />
+              <el-table-column prop="username" label="用户名" />
+              <el-table-column prop="role" label="角色" width="120">
+                <template #default="{ row }">
+                  <el-tag :type="row.role === 'admin' ? 'danger' : 'info'">{{ row.role }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="created_at" label="注册时间" width="190" />
+              <el-table-column label="操作" width="120">
+                <template #default="{ row }">
+                  <el-button size="small" type="danger" :disabled="row.role === 'admin'"
+                             @click="deleteUser(row)">删除</el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <el-tab-pane label="热词统计" name="hotwords">
+            <div class="admin-actions">
+              <span class="hint">统计最近 7 天用户提问的高频词（jieba 分词）</span>
+              <el-button :loading="hotwordsLoading" @click="loadHotwords">
+                <el-icon><refresh /></el-icon>&nbsp;刷新
+              </el-button>
+            </div>
+            <div v-if="!hotwords.length && !hotwordsLoading" class="admin-empty">
+              最近 7 天暂无提问记录
+            </div>
+            <div class="hotword-cloud">
+              <el-tag v-for="(w, i) in hotwords" :key="w.word"
+                      :type="['danger','warning','primary','success','info'][i % 5]"
+                      size="large" effect="light" class="hotword-tag">
+                {{ w.word }}（{{ w.count }}）
+              </el-tag>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@3.4.38/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus@2.8.4/dist/index.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/element-plus@2.8.4/dist/locale/zh-cn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@element-plus/icons-vue@2.3.1/dist/index.iife.min.js"></script>
+<script>
+const { createApp } = Vue;
+
+const app = createApp({
+  data() {
+    return {
+      // 相对地址：页面与 API 同源（http://127.0.0.1:8000/），file:// 打开会被浏览器拦 localStorage，已不支持
+      apiBase: '',
+      token: localStorage.getItem('qa_token') || '',
+      username: localStorage.getItem('qa_username') || '',
+      role: localStorage.getItem('qa_role') || '',
+
+      // 登录/注册
+      authMode: 'login',
+      authForm: { username: '', password: '', confirm: '' },
+      authLoading: false,
+
+      // 会话与消息
+      sessions: [],
+      currentSessionId: null,
+      messages: [],
+      inputText: '',
+      sending: false,
+
+      // 流式打字机状态
+      streamSeq: 0,       // 递增使旧流失效
+      streamController: null,  // 当前流的 AbortController（切换会话/退出时中止）
+      typingTimer: null,
+      typingBuf: '',
+      pendingDone: null,
+      typingMsg: null,
+
+      // 管理后台
+      adminView: '',          // 'docs' | 'users' | 'hotwords'
+      adminDocs: [],
+      adminDocsLoading: false,
+      rebuildLoading: false,
+      adminUsers: [],
+      adminUsersLoading: false,
+      hotwords: [],
+      hotwordsLoading: false,
+    };
+  },
+  computed: {
+    loggedIn() { return !!this.token; },
+    isAdmin() { return this.role === 'admin'; },
+  },
+  mounted() {
+    if (this.token) {
+      // 恢复登录态后拉一次真实角色（管理入口是否显示以此为准，不轻信 localStorage）
+      this.api('/api/auth/me').then(r => r.json()).then(d => {
+        this.role = d.role || '';
+        localStorage.setItem('qa_role', this.role);
+      }).catch(() => {});
+      this.loadSessions();
+    }
+  },
+
+  methods: {
+    /* ---------- 基础请求 ---------- */
+    async api(path, opts = {}) {
+      const headers = { ...(opts.headers || {}) };
+      // FormData（文件上传）不能手动指定 Content-Type：boundary 分隔符必须由浏览器
+      // 自动生成，手动设成 application/json 会导致后端无法解析 multipart 而报 422
+      if (!(opts.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+      if (this.token) headers['Authorization'] = 'Bearer ' + this.token;
+      let res;
+      try {
+        res = await fetch(this.apiBase + path, { ...opts, headers });
+      } catch (e) {
+        throw new Error('无法连接后端服务，请确认已启动 uvicorn');
+      }
+      if (res.status === 401) {
+        if (this.token) { this.logout(); throw new Error('登录已过期，请重新登录'); }
+        // 登录接口本身的 401 走下面的 detail 解析
+      }
+      if (!res.ok) {
+        let detail = '请求失败（' + res.status + '）';
+        try { const d = await res.json(); detail = d.detail || detail; } catch (e) {}
+        throw new Error(detail);
+      }
+      return res;
+    },
+
+    /* ---------- 登录 / 注册 ---------- */
+    async doAuth() {
+      const { username, password, confirm } = this.authForm;
+      if (!username || !password) { this.$message.warning('请输入用户名和密码'); return; }
+      if (this.authMode === 'register') {
+        if (password.length < 6) { this.$message.warning('密码至少 6 位'); return; }
+        if (password !== confirm) { this.$message.warning('两次输入的密码不一致'); return; }
+      }
+      this.authLoading = true;
+      try {
+        const path = this.authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+        const res = await this.api(path, {
+          method: 'POST',
+          body: JSON.stringify({ username, password }),
+        });
+        const data = await res.json();
+        if (this.authMode === 'register') {
+          this.$message.success('注册成功，请登录');
+          this.authMode = 'login';
+          this.authForm.password = '';
+          this.authForm.confirm = '';
+          return;
+        }
+        this.token = data.access_token;
+        this.username = username;
+        this.role = data.role || 'user';
+        localStorage.setItem('qa_token', this.token);
+        localStorage.setItem('qa_username', username);
+        localStorage.setItem('qa_role', this.role);
+        this.loadSessions();
+      } catch (e) {
+        this.$message.error(e.message);
+      } finally {
+        this.authLoading = false;
+      }
+    },
+
+    logout() {
+      this.invalidateStream();          // 中止当前流
+      this.token = '';
+      this.username = '';
+      this.role = '';
+      localStorage.removeItem('qa_token');
+      localStorage.removeItem('qa_username');
+      localStorage.removeItem('qa_role');
+      this.sessions = [];
+      this.currentSessionId = null;
+      this.messages = [];
+      this.inputText = '';
+      this.adminView = '';
+      this.adminDocs = [];
+      this.adminUsers = [];
+      this.hotwords = [];
+    },
+
+    /* ---------- 会话 ---------- */
+    async loadSessions() {
+      try {
+        const res = await this.api('/api/chat/sessions');
+        this.sessions = await res.json();
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    newSession() {
+      this.invalidateStream();          // 中止当前流
+      this.currentSessionId = null;
+      this.messages = [];
+    },
+
+    async switchSession(id) {
+      if (id === this.currentSessionId) return;
+      this.invalidateStream();          // 中止当前流
+      this.currentSessionId = id;
+      try {
+        const res = await this.api(`/api/chat/sessions/${id}/messages`);
+        const data = await res.json();
+        this.messages = data.map(m => ({ role: m.role, content: m.content, sources: [], typing: false }));
+        this.scrollToBottom();
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    async deleteSession(id) {
+      try {
+        await this.$confirm('删除后聊天记录不可恢复，确定删除该会话？', '提示', { type: 'warning' });
+      } catch (e) { return; } // 用户取消
+      try {
+        await this.api(`/api/chat/sessions/${id}`, { method: 'DELETE' });
+        this.$message.success('已删除');
+        if (this.currentSessionId === id) {
+          this.currentSessionId = null;
+          this.messages = [];
+        }
+        this.loadSessions();
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    /* ---------- 发消息（SSE 流式 + 打字机） ---------- */
+    async send() {
+      const question = this.inputText.trim();
+      if (!question || this.sending) return;
+
+      let sessionId = this.currentSessionId;
+      if (!sessionId) {
+        try {
+          const res = await this.api('/api/chat/sessions', {
+            method: 'POST',
+            body: JSON.stringify({ question }),
+          });
+          const data = await res.json();
+          sessionId = data.id;
+          this.currentSessionId = sessionId;
+          this.loadSessions();
+        } catch (e) {
+          this.$message.error(e.message);
+          return;
+        }
+      }
+
+      this.inputText = '';
+      this.messages.push({ role: 'user', content: question });
+      // 关键：必须用 reactive() 包一层再存引用。若保存普通对象并在定时器里直接改它，
+      // 修改会绕过 Vue 的响应式代理，界面不刷新——表现为一直"正在思考"，
+      // 直到输入框打字触发一次无关的重新渲染才冒出整段答案。
+      const aiMsg = Vue.reactive({ role: 'assistant', content: '', sources: [], typing: true });
+      this.messages.push(aiMsg);
+      this.sending = true;
+      this.scrollToBottom();
+
+      const seq = ++this.streamSeq;
+      this.typingBuf = '';
+      this.pendingDone = null;
+      this.typingMsg = aiMsg;
+      this.startTyping(aiMsg, seq);
+
+      const controller = new AbortController();
+      this.streamController = controller;
+      try {
+        await this.streamRequest(`/api/chat/sessions/${sessionId}/messages/stream`, { question }, seq, controller.signal);
+      } catch (e) {
+        if (seq === this.streamSeq) {
+          this.finishStream(aiMsg, seq, e.message);  // 网络错误：清 loading + 兜底文案（Abort 不提示）
+        }
+      } finally {
+        if (seq === this.streamSeq) {
+          this.sending = false;
+          this.streamController = null;
+        }
+      }
+    },
+
+    async streamRequest(path, body, seq, signal) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (this.token) headers['Authorization'] = 'Bearer ' + this.token;
+      let res;
+      try {
+        res = await fetch(this.apiBase + path, { method: 'POST', headers, body: JSON.stringify(body), signal });
+      } catch (e) {
+        if (e.name === 'AbortError') throw new Error('aborted');  // 主动中止：不报错、不覆盖消息
+        throw new Error('无法连接后端服务，请确认已启动 uvicorn');
+      }
+      if (res.status === 401) { this.logout(); throw new Error('登录已过期，请重新登录'); }
+      if (!res.ok) {
+        let detail = '请求失败（' + res.status + '）';
+        try { const d = await res.json(); detail = d.detail || detail; } catch (e) {}
+        throw new Error(detail);
+      }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        let idx;
+        while ((idx = buf.indexOf('\n\n')) !== -1) {
+          const frame = buf.slice(0, idx);
+          buf = buf.slice(idx + 2);
+          for (const line of frame.split('\n')) {
+            if (line.startsWith('data: ')) {
+              const ev = JSON.parse(line.slice(6));
+              if (seq === this.streamSeq) this.onStreamEvent(ev);
+            }
+          }
+        }
+      }
+      // 流结束（连接正常关闭）：缓冲里还有 token 或没等到 done 时，做兜底收尾
+      if (seq !== this.streamSeq) throw new Error('aborted');
+      if (buf.trim()) {
+        for (const line of buf.split('\n')) {
+          if (line.startsWith('data: ')) {
+            const ev = JSON.parse(line.slice(6));
+            if (seq === this.streamSeq) this.onStreamEvent(ev);
+          }
+        }
+      }
+      if (seq === this.streamSeq && !this.pendingDone && !this.typingMsg) {
+        throw new Error('流已结束，但未收到完整回答');
+      }
+    },
+
+    // 中止当前流：切换会话 / 退出登录 / 新流开始前调用
+    invalidateStream() {
+      this.streamSeq++;                    // 旧流事件全部失效
+      if (this.streamController) this.streamController.abort();
+      this.streamController = null;
+      this.sending = false;
+      clearInterval(this.typingTimer);
+      this.typingTimer = null;
+      this.typingBuf = '';
+      this.pendingDone = null;
+      this.typingMsg = null;
+    },
+
+    // 结束打字机：清 loading；传 errMsg 且尚无内容时显示兜底文案
+    finishStream(msg, seq, errMsg) {
+      if (!msg || seq !== this.streamSeq) return;
+      msg.typing = false;
+      if (errMsg && !msg.content) msg.content = '（' + errMsg + '）';
+      if (!msg.sources) msg.sources = [];
+      clearInterval(this.typingTimer);
+      this.typingTimer = null;
+      this.typingBuf = '';
+      this.pendingDone = null;
+      this.typingMsg = null;
+      this.scrollToBottom();
+    },
+
+    onStreamEvent(ev) {
+      if (ev.type === 'token') {
+        this.typingBuf += ev.content;
+      } else if (ev.type === 'done') {
+        this.pendingDone = ev;
+      } else if (ev.type === 'error') {
+        this.finishStream(this.typingMsg, this.streamSeq, ev.message || '生成失败');
+        this.$message.error(ev.message || '生成失败');
+      }
+    },
+
+    startTyping(msg, seq) {
+      clearInterval(this.typingTimer);
+      this.typingTimer = setInterval(() => {
+        if (seq !== this.streamSeq) { clearInterval(this.typingTimer); return; }
+        if (this.typingBuf) {
+          msg.content += this.typingBuf.slice(0, 3);   // 每次打 3 个字
+          this.typingBuf = this.typingBuf.slice(3);
+          this.scrollToBottom();
+        } else if (this.pendingDone) {
+          msg.content = this.pendingDone.answer;       // 收尾：与后端完整答案一致
+          msg.sources = this.pendingDone.sources || [];
+          this.finishStream(msg, seq, null);
+        } else if (!msg.typing) {
+          clearInterval(this.typingTimer);             // 出错后停止
+        }
+      }, 24);
+    },
+
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const el = this.$refs.messagesEl;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    },
+
+    /* ---------- 管理后台 ---------- */
+    toggleAdmin() {
+      if (!this.isAdmin) return;
+      if (!this.adminView) {
+        this.adminView = 'docs';       // 默认打开文档管理
+        this.loadAdminDocs();
+        this.loadAdminUsers();
+        this.loadHotwords();
+      } else {
+        this.adminView = '';
+      }
+    },
+
+    async loadAdminDocs() {
+      this.adminDocsLoading = true;
+      try {
+        const res = await this.api('/api/admin/documents');
+        this.adminDocs = await res.json();
+      } catch (e) {
+        this.$message.error(e.message);
+      } finally {
+        this.adminDocsLoading = false;
+      }
+    },
+
+    async uploadDoc(options) {
+      const fd = new FormData();
+      fd.append('file', options.file);
+      try {
+        await this.api('/api/admin/documents/upload', { method: 'POST', body: fd });
+        this.$message.success('上传成功');
+        this.loadAdminDocs();
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    async deleteDoc(row) {
+      try {
+        await this.$confirm('删除文档将同时删除磁盘文件，确定？', '提示', { type: 'warning' });
+      } catch (e) { return; }
+      try {
+        await this.api(`/api/admin/documents/${row.id}`, { method: 'DELETE' });
+        this.$message.success('已删除');
+        this.loadAdminDocs();
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    async rebuildIndex() {
+      try {
+        await this.$confirm('重建将清空旧索引并扫描全部上传文档，耗时约几十秒，确定？', '提示', { type: 'warning' });
+      } catch (e) { return; }
+      this.rebuildLoading = true;
+      try {
+        const res = await this.api('/api/admin/documents/rebuild', { method: 'POST' });
+        const data = await res.json();
+        this.$message.success(`索引重建成功，共 ${data.total_chunks} 个块`);
+        this.loadAdminDocs();
+      } catch (e) {
+        this.$message.error(e.message);
+      } finally {
+        this.rebuildLoading = false;
+      }
+    },
+
+    async loadAdminUsers() {
+      this.adminUsersLoading = true;
+      try {
+        const res = await this.api('/api/admin/users');
+        this.adminUsers = await res.json();
+      } catch (e) {
+        this.$message.error(e.message);
+      } finally {
+        this.adminUsersLoading = false;
+      }
+    },
+
+    async deleteUser(row) {
+      try {
+        await this.$confirm(`删除用户「${row.username}」及其全部会话记录，确定？`, '提示', { type: 'warning' });
+      } catch (e) { return; }
+      try {
+        await this.api(`/api/admin/users/${row.id}`, { method: 'DELETE' });
+        this.$message.success('已删除');
+        this.loadAdminUsers();
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    async loadHotwords() {
+      this.hotwordsLoading = true;
+      try {
+        const res = await this.api('/api/admin/stats/hotwords');
+        this.hotwords = await res.json();
+        this.hotwords = this.hotwords.words || [];
+      } catch (e) {
+        this.$message.error(e.message);
+      } finally {
+        this.hotwordsLoading = false;
+      }
+    },
+  },
+});
+
+app.use(ElementPlus, { locale: ElementPlusLocaleZhCn });
+for (const [name, comp] of Object.entries(ElementPlusIconsVue)) {
+  app.component(name, comp);
+}
+app.mount('#app');
+</script>
+</body>
+</html>
