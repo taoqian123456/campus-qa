@@ -131,8 +131,9 @@ def _retrieve_and_build(question: str, history=None):
     store = get_vector_store()
     results = store.search(question, TOP_K)
 
-    # 相关性过滤：分数低于 MIN_SCORE 的块不进上下文、不列来源
-    results = [r for r in results if r["score"] >= MIN_SCORE]
+    # 相关性过滤：混合检索下，score 是向量相似度——
+    # 纯 BM25 命中的块向量分记 0（未进向量 top-N），保留；向量分低于 MIN_SCORE 的弱相关块过滤
+    results = [r for r in results if r["score"] == 0 or r["score"] >= MIN_SCORE]
 
     if not results:
         raw = store.search(question, TOP_K)  # 再取一次原始结果算置信度（代价小，可接受）
