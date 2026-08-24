@@ -28,3 +28,4 @@ bcrypt==4.0.1  # 必须固定：passlib 与 bcrypt>=4.1 不兼容（"AttributeEr
 
 # ---------- 其他 ----------
 jieba>=0.42
+rank_bm25>=0.2

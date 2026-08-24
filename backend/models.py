@@ -38,6 +38,9 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # user / assistant
     content: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    # 回答反馈：up 点赞 / down 点踩（仅 assistant 消息有效）；reply_reason 是点踩原因
+    reply_feedback: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    reply_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
 
 class Document(Base):
@@ -48,3 +51,6 @@ class Document(Base):
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="pending")  # pending / indexed / failed
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    # 知识库体检：分块数（索引重建时同步）与检索命中次数（每次问答 top-k 命中时累加）
+    chunk_count: Mapped[int] = mapped_column(default=0)
+    hit_count: Mapped[int] = mapped_column(default=0)

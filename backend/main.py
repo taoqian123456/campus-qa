@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 from admin.documents import router as admin_router
+from admin.kb_health import router as kb_health_router
 from admin.stats import router as admin_stats_router
 from admin.users import router as admin_users_router
 from auth.deps import get_current_user
@@ -29,6 +30,7 @@ app.include_router(auth_router)
 app.include_router(admin_router)
 app.include_router(admin_users_router)
 app.include_router(admin_stats_router)
+app.include_router(kb_health_router)
 app.include_router(chat_router)
 
 # 允许跨域（前端单文件直接打开时也需要）

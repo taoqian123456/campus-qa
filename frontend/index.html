@@ -9,48 +9,90 @@
 <style>
 [v-cloak] { display: none; }
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ---------- 主题变量 ---------- */
+/* Element Plus 色板随主题蓝紫渐变统一（#4f7cff -> #6a5cff），light-3~9 / dark-2 为手调混色 */
+:root {
+  --el-color-primary: #4f7cff;
+  --el-color-primary-light-3: #84a3ff;
+  --el-color-primary-light-5: #a7beff;
+  --el-color-primary-light-7: #cad8ff;
+  --el-color-primary-light-8: #dce5ff;
+  --el-color-primary-light-9: #edf2ff;
+  --el-color-primary-dark-2: #3f63cc;
+  --theme-grad: linear-gradient(135deg, #4f7cff 0%, #6a5cff 100%);
+  --theme-grad-hover: linear-gradient(135deg, #5f8aff 0%, #7a6dff 100%);
+  --shadow-soft: 0 4px 16px rgba(79, 92, 189, .10);
+  --radius-card: 12px;
+  --transition-fast: .2s ease;
+  /* 页面背景渐变（"主题色"面板切换时由 JS 覆盖，见 themePresets） */
+  --page-bg: linear-gradient(160deg, #eef3ff 0%, #f6f9ff 45%, #f2f0ff 100%);
+}
+
 body {
   font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
-  background: #f0f4fa;
+  background: var(--page-bg);
   color: #33415c;
+}
+
+/* ---------- 滚动条美化：细滚动条 + 圆角滑块 ---------- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: #c9d4ec; border-radius: 4px; border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: #a9b9e2; background-clip: content-box; }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* 动效偏好降级：用户系统开启"减弱动态效果"时关闭全部动画（无障碍） */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
 }
 
 /* ---------- 登录/注册页 ---------- */
 .auth-page {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #dbe9ff 0%, #f6faff 55%, #e8f2ff 100%);
+  background: linear-gradient(135deg, #e2ebff 0%, #f6faff 45%, #ede9ff 100%);
 }
 .auth-card {
-  width: 400px; background: #fff; border-radius: 14px;
-  padding: 36px 32px 28px; box-shadow: 0 8px 30px rgba(31, 91, 190, .12);
+  width: 400px; background: #fff; border-radius: var(--radius-card);
+  padding: 36px 32px 28px; box-shadow: 0 12px 40px rgba(79, 92, 189, .14);
 }
 .auth-logo {
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  color: #1f5fbe; font-size: 19px; font-weight: 600; margin-bottom: 24px;
+  background: var(--theme-grad); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; font-size: 19px; font-weight: 600; margin-bottom: 24px;
 }
 .auth-tabs { display: flex; border-bottom: 2px solid #eef1f6; margin-bottom: 22px; }
 .auth-tab {
   flex: 1; text-align: center; padding: 10px 0 12px; cursor: pointer;
-  color: #7a8699; font-size: 15px; position: relative; transition: color .2s;
+  color: #7a8699; font-size: 15px; position: relative; transition: color var(--transition-fast);
 }
-.auth-tab.active { color: #1f5fbe; font-weight: 600; }
+.auth-tab.active { color: var(--el-color-primary); font-weight: 600; }
 .auth-tab.active::after {
   content: ''; position: absolute; left: 35%; right: 35%; bottom: -2px;
-  height: 2px; background: #1f5fbe; border-radius: 2px;
+  height: 2px; background: var(--theme-grad); border-radius: 2px;
 }
 .auth-field { margin-bottom: 16px; }
 .auth-btn { width: 100%; margin-top: 6px; }
 .auth-tip { margin-top: 18px; text-align: center; color: #98a3b3; font-size: 13px; }
-.auth-tip a { color: #1f5fbe; cursor: pointer; margin-left: 4px; }
+.auth-tip a { color: var(--el-color-primary); cursor: pointer; margin-left: 4px; transition: color var(--transition-fast); }
+.auth-tip a:hover { color: var(--el-color-primary-dark-2); }
 
 /* ---------- 聊天页 ---------- */
 .chat-page { height: 100vh; display: flex; flex-direction: column; }
 .topbar {
-  height: 56px; background: #fff; border-bottom: 1px solid #e6ebf2;
+  height: 56px; background: rgba(255, 255, 255, .88); backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e6ebf2;
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 20px; flex-shrink: 0;
 }
-.brand { display: flex; align-items: center; gap: 8px; color: #1f5fbe; font-size: 16px; font-weight: 600; }
+.brand {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--theme-grad); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; font-size: 16px; font-weight: 600;
+}
 .topbar-right { display: flex; align-items: center; gap: 16px; }
 .username { color: #5a6b85; font-size: 14px; display: flex; align-items: center; gap: 5px; }
 
@@ -58,7 +100,8 @@ body {
 
 /* 左侧会话列表 */
 .side {
-  width: 260px; background: #fff; border-right: 1px solid #e6ebf2;
+  width: 260px; background: rgba(255, 255, 255, .92);
+  border-right: 1px solid #e6ebf2;
   display: flex; flex-direction: column; flex-shrink: 0;
 }
 .side-header { padding: 14px; border-bottom: 1px solid #f0f3f8; }
@@ -66,47 +109,297 @@ body {
 .session-list { flex: 1; overflow-y: auto; padding: 8px; }
 .session-item {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 11px 12px; border-radius: 8px; cursor: pointer;
-  color: #41506a; font-size: 14px; margin-bottom: 2px; transition: background .15s;
+  padding: 11px 12px; border-radius: 10px; cursor: pointer;
+  color: #41506a; font-size: 14px; margin-bottom: 2px;
+  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+  position: relative;
 }
-.session-item:hover { background: #f2f6fc; }
-.session-item.active { background: #e8f1ff; color: #1f5fbe; font-weight: 600; }
+/* hover 背景变亮 + 轻微右移 */
+.session-item:hover { background: #eef3ff; transform: translateX(2px); }
+/* 当前会话：渐变高亮条 + 浅蓝底 */
+.session-item.active { background: #e9efff; color: var(--el-color-primary); font-weight: 600; }
+.session-item.active::before {
+  content: ''; position: absolute; left: 0; top: 20%; bottom: 20%; width: 3px;
+  border-radius: 2px; background: var(--theme-grad);
+}
 .session-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 8px; }
-.session-del { color: #b6c2d2; flex-shrink: 0; }
+.session-del { color: #b6c2d2; flex-shrink: 0; transition: color var(--transition-fast); }
 .session-del:hover { color: #f56c6c; }
 .session-empty { text-align: center; color: #b6c2d2; padding: 40px 0; font-size: 13px; }
+/* 会话多选：圆角方形复选框，hover 描边亮起，选中后渐变填充 + 阴影 */
+.session-check {
+  width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
+  border: 2px solid #d3dded; background: #fff; margin-right: 11px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 1px 2px rgba(31, 77, 178, .05);
+  transition: all var(--transition-fast);
+}
+.session-check:hover {
+  border-color: var(--el-color-primary-light-3);
+  background: var(--el-color-primary-light-9);
+}
+.session-item.checked .session-check {
+  background: var(--theme-grad); border-color: transparent;
+  box-shadow: 0 2px 6px rgba(79, 124, 255, .35);
+}
+.session-check::after {
+  content: '✓'; color: #fff; font-size: 11px; font-weight: 800;
+  opacity: 0; transform: scale(.4);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+.session-item.checked .session-check::after { opacity: 1; transform: scale(1); }
+
+/* 批量操作卡片：勾选会话后从底部弹出（弹性回弹动画） */
+.session-batch-card {
+  margin: 12px;
+  background: linear-gradient(165deg, #ffffff 0%, #f8faff 100%);
+  border: 1px solid #e6edfa;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(79, 92, 189, .14), 0 2px 8px rgba(31, 77, 178, .06);
+  animation: batchPop .32s cubic-bezier(.34, 1.56, .64, 1);
+}
+@keyframes batchPop {
+  from { opacity: 0; transform: translateY(14px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.batch-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.batch-title {
+  font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  background: var(--theme-grad); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.batch-badge {
+  font-size: 11.5px; font-weight: 600; color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-7);
+  padding: 3px 10px; border-radius: 999px;
+}
+.batch-actions { display: flex; gap: 8px; }
+.batch-btn {
+  flex: 1; height: 34px; border: none; border-radius: 9px;
+  font-size: 13px; font-weight: 600; cursor: pointer; letter-spacing: 1px;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast),
+              background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+}
+/* 删除选中：红色渐变主按钮 */
+.batch-btn-danger {
+  background: linear-gradient(135deg, #ff7a6b 0%, #f4524b 100%);
+  color: #fff; box-shadow: 0 4px 12px rgba(244, 82, 75, .28);
+}
+.batch-btn-danger:hover {
+  transform: translateY(-1px); filter: brightness(1.06);
+  box-shadow: 0 6px 16px rgba(244, 82, 75, .36);
+}
+.batch-btn-danger:active { transform: scale(.96); }
+/* 全选：白底幽灵按钮 */
+.batch-btn-ghost {
+  background: #fff; color: #5a6b85;
+  border: 1px solid #dce5f5;
+  box-shadow: 0 2px 6px rgba(31, 77, 178, .05);
+}
+.batch-btn-ghost:hover {
+  border-color: var(--el-color-primary-light-5);
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  transform: translateY(-1px);
+}
+.batch-btn-ghost:active { transform: scale(.96); }
+/* 一键清空：卡片底部分隔区，低调链接式（hover 变红） */
+.batch-clear {
+  margin-top: 10px; padding-top: 10px; border-top: 1px dashed #e3e9f5;
+  text-align: center; font-size: 12px; letter-spacing: .5px;
+  color: #a3b0c4; cursor: pointer; user-select: none;
+  transition: color var(--transition-fast);
+}
+.batch-clear:hover { color: #f56c6c; }
 
 /* 右侧聊天区 */
-.chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; background: #f5f8fd; }
+.chat-area { flex: 1; display: flex; flex-direction: column; min-width: 0; background: transparent; position: relative; }
+/* 自定义背景：背景图铺满聊天区，模糊 + 半透明白遮罩保证文字可读 */
+.chat-bg {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center;
+  filter: blur(8px); transform: scale(1.06);  /* 边缘模糊补偿，避免露出白边 */
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.chat-bg.visible { opacity: 1; }
+.chat-bg-overlay {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: rgba(255, 255, 255, .72);
+}
+/* 聊天区内容浮在背景之上 */
+.chat-area > .messages, .chat-area > .input-area { position: relative; z-index: 2; }
+.chat-area .input-area { background: rgba(255, 255, 255, .85); }
 .messages { flex: 1; overflow-y: auto; padding: 24px 0; }
 .msg-row { display: flex; gap: 10px; margin: 0 auto 20px; max-width: 860px; padding: 0 24px; }
 .msg-row.user { flex-direction: row-reverse; }
-.avatar {
-  width: 36px; height: 36px; border-radius: 50%; background: #1f5fbe; color: #fff;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+/* 气泡滑入动画：AI 左滑入 / 用户右滑入（消息插入 DOM 时触发一次） */
+.msg-row:not(.user) { animation: fadeInLeft .35s ease both; }
+.msg-row.user { animation: fadeInRight .35s ease both; }
+@keyframes fadeInLeft {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
 }
-.msg-row.user .avatar { background: #8ab4e8; }
+@keyframes fadeInRight {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--theme-grad); color: #fff;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  box-shadow: var(--shadow-soft);
+}
+.msg-row.user .avatar { background: linear-gradient(135deg, #9db8ff 0%, #b3a6ff 100%); }
 .bubble-wrap { max-width: 76%; display: flex; flex-direction: column; }
 .msg-row.user .bubble-wrap { align-items: flex-end; }
+/* 消息时间：低调灰色小字，气泡同侧（AI 左 / 用户右） */
+.msg-time {
+  font-size: 11px; color: #b3bdce; margin: 4px 2px 0;
+  user-select: none;
+}
+/* 回答反馈：👍👎 小图标，选中后高亮 */
+.msg-feedback {
+  margin-top: 6px; display: flex; gap: 6px; align-items: center;
+  animation: metaFadeIn .4s ease;
+}
+.fb-btn {
+  font-size: 13px; line-height: 1; padding: 4px 9px;
+  border-radius: 999px; cursor: pointer; user-select: none;
+  background: #f3f6fb; border: 1px solid transparent;
+  transition: all var(--transition-fast);
+}
+.fb-btn:hover { transform: translateY(-1px); background: #e9effb; }
+.fb-btn.active { border-color: var(--el-color-primary-light-5); box-shadow: 0 2px 6px rgba(79, 124, 255, .18); }
+.fb-btn.active.up { background: var(--el-color-primary-light-9); }
+.fb-btn.active.down { background: #fff0ee; border-color: #ffc9c2; box-shadow: 0 2px 6px rgba(244, 82, 75, .15); }
+/* 点踩原因选择弹框 */
+.fb-reason-label { font-size: 13px; color: #5a6b85; margin-bottom: 10px; }
+.fb-reason-option {
+  display: block; padding: 9px 14px; border-radius: 9px; cursor: pointer;
+  font-size: 13.5px; color: #41506a; margin-bottom: 8px;
+  border: 1px solid #e6ebf2; transition: all var(--transition-fast);
+}
+.fb-reason-option:hover { border-color: var(--el-color-primary-light-5); background: var(--el-color-primary-light-9); }
+.fb-reason-option.selected {
+  border-color: var(--el-color-primary); background: var(--el-color-primary-light-9);
+  color: var(--el-color-primary); font-weight: 600;
+}
+/* 点踩原因弹框 */
+.fb-dialog-mask {
+  position: fixed; inset: 0; z-index: 70; background: rgba(30, 40, 60, .35);
+  display: flex; align-items: center; justify-content: center;
+  animation: metaFadeIn .2s ease;
+}
+.fb-dialog {
+  width: 320px; background: #fff; border-radius: var(--radius-card);
+  padding: 20px; box-shadow: 0 16px 48px rgba(30, 40, 60, .25);
+}
+.fb-dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .bubble {
   padding: 11px 15px; border-radius: 12px; font-size: 14.5px; line-height: 1.65;
   word-break: break-word; white-space: pre-wrap;
+  transition: box-shadow var(--transition-fast);
 }
-.bubble.user { background: #1f5fbe; color: #fff; border-top-right-radius: 3px; }
-.bubble.assistant { background: #fff; color: #33415c; border: 1px solid #e6ebf2; border-top-left-radius: 3px; }
-.thinking { color: #98a3b3; font-style: italic; }
-.cursor { animation: blink .9s infinite; color: #1f5fbe; }
+.bubble.user {
+  background: var(--theme-grad); color: #fff; border-top-right-radius: 3px;
+  box-shadow: 0 4px 14px rgba(79, 124, 255, .28);
+}
+.bubble.assistant {
+  background: #fff; color: #33415c; border: 1px solid #e6ebf2; border-top-left-radius: 3px;
+  box-shadow: var(--shadow-soft);
+}
+/* "正在思考"：三点跳动动画（替代纯文字；屏幕阅读器仍能读到文本） */
+.thinking {
+  display: inline-flex; align-items: center; gap: 5px;
+  color: #98a3b3; font-style: italic;
+}
+.thinking .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--el-color-primary-light-5);
+  animation: dotBounce 1.2s ease-in-out infinite;
+}
+.thinking .dot:nth-child(2) { animation-delay: .15s; }
+.thinking .dot:nth-child(3) { animation-delay: .3s; }
+@keyframes dotBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: .45; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+.cursor { animation: blink .9s infinite; color: var(--el-color-primary); }
 @keyframes blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 .sources {
   margin-top: 6px; font-size: 12px; color: #98a3b3;
   display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+  /* 打字结束后（v-if 由 typing 控制）元素才插入，淡入一次，避免随字跳动 */
+  animation: metaFadeIn .4s ease;
+}
+@keyframes metaFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .source-tag { background: #eef3fb; color: #5a7cb5; padding: 1px 8px; border-radius: 10px; }
-.welcome { text-align: center; padding-top: 22vh; color: #b6c2d2; }
-.welcome p { margin-top: 14px; font-size: 14px; }
+/* 相关度徽章：高=绿 / 中=橙 / 低=灰（检索最高相似度经 config 阈值映射） */
+.confidence-tag { padding: 1px 9px; border-radius: 10px; font-weight: 600; }
+.confidence-high { background: #e8f7ef; color: #2fa05a; }
+.confidence-mid { background: #fdf3e7; color: #d98a2b; }
+.confidence-low { background: #f0f2f5; color: #9099a5; }
+/* 推荐追问（回答结束后由推荐接口异步填充，失败静默不显示） */
+.recommends { margin-top: 10px; animation: metaFadeIn .4s ease; }
+.recommends-title { font-size: 12.5px; color: #98a3b3; margin-bottom: 6px; }
+.recommend-chip {
+  display: inline-block; padding: 4px 11px; margin: 0 8px 6px 0;
+  background: #eef3fb; color: var(--el-color-primary); font-size: 13px; border-radius: 13px;
+  cursor: pointer; border: 1px solid transparent;
+  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+.recommend-chip:hover {
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-5);
+  transform: translateY(-1px);
+}
+.welcome { text-align: center; padding-top: 12vh; color: #b6c2d2; }
+.welcome-logo {
+  width: 76px; height: 76px; margin: 0 auto; border-radius: 50%;
+  background: var(--theme-grad); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 30px rgba(79, 124, 255, .32);
+  animation: logoFloat 3s ease-in-out infinite;
+}
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.welcome-title {
+  margin-top: 22px; font-size: 22px; font-weight: 700; letter-spacing: 2px;
+  background: var(--theme-grad); -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.welcome-sub { margin-top: 10px; font-size: 13.5px; color: #a3aec3; letter-spacing: .5px; }
+/* 示例问题按钮组 */
+.welcome-samples { margin-top: 30px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.welcome-samples-label { font-size: 12.5px; color: #b6c2d2; margin-bottom: 2px; }
+.sample-question {
+  width: 320px; padding: 11px 18px; border-radius: 12px;
+  background: rgba(255, 255, 255, .88); border: 1px solid #e6edfa;
+  color: #4a5a76; font-size: 13.5px; cursor: pointer;
+  box-shadow: 0 3px 10px rgba(79, 92, 189, .06);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast),
+              border-color var(--transition-fast), color var(--transition-fast);
+}
+.sample-question:hover {
+  transform: translateY(-2px);
+  border-color: var(--el-color-primary-light-5);
+  color: var(--el-color-primary);
+  box-shadow: 0 6px 18px rgba(79, 124, 255, .16);
+}
 
 /* 输入区 */
-.input-area { border-top: 1px solid #e6ebf2; background: #fff; padding: 14px 24px 18px; }
+.input-area { border-top: 1px solid #e6ebf2; background: rgba(255, 255, 255, .92); padding: 14px 24px 18px; }
 .input-area .el-textarea { max-width: 860px; margin: 0 auto; display: block; }
 .input-footer {
   max-width: 860px; margin: 10px auto 0;
@@ -114,21 +407,107 @@ body {
 }
 .hint { color: #b6c2d2; font-size: 12px; }
 
+/* 发送按钮：hover 放大 1.05 + 亮起；发送中（is-loading）按压 + 缩放，避免与 hover 叠加跳动 */
+/* 主按钮统一渐变背景（登录/新建会话/发送按钮一致） */
+.el-button--primary {
+  background: var(--theme-grad);
+  border: none;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), filter var(--transition-fast);
+}
+.el-button--primary:hover {
+  filter: brightness(1.08);
+  background: var(--theme-grad-hover);
+  box-shadow: 0 6px 18px rgba(79, 124, 255, .35);
+}
+.input-footer .el-button--primary:hover {
+  transform: scale(1.05);
+  filter: brightness(1.08);
+  background: var(--theme-grad-hover);
+  box-shadow: 0 6px 18px rgba(79, 124, 255, .35);
+}
+.input-footer .el-button--primary:active { transform: scale(.95); }
+/* Element Plus 加载态强制同渐变（默认灰底会闪一下）；发送期间按压脉冲 */
+.input-footer .el-button--primary.is-loading {
+  background: var(--theme-grad);
+  animation: sendPulse 1.2s ease-in-out infinite;
+}
+.input-footer .el-button--primary.is-loading:hover { transform: none; filter: none; }
+@keyframes sendPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(.96); }
+}
+
+/* ---------- 主题设置面板（顶栏 🎨 主题） ---------- */
+.theme-panel {
+  position: fixed; top: 64px; right: 20px; z-index: 60;
+  width: 300px; background: #fff; border-radius: var(--radius-card);
+  box-shadow: 0 12px 40px rgba(79, 92, 189, .18);
+  padding: 18px; animation: fadeInDown .25s ease;
+}
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.theme-panel-title { font-size: 14px; font-weight: 600; color: #33415c; margin-bottom: 14px; }
+.theme-section { margin-bottom: 16px; }
+.theme-section-label { font-size: 12.5px; color: #98a3b3; margin-bottom: 8px; }
+/* 渐变色板：圆形色块，选中带勾 */
+.preset-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.preset-item {
+  width: 38px; height: 38px; border-radius: 50%; cursor: pointer;
+  border: 2px solid transparent; position: relative;
+  transition: transform var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.preset-item:hover { transform: scale(1.12); }
+.preset-item.active { border-color: #33415c; box-shadow: 0 2px 8px rgba(0, 0, 0, .18); }
+.preset-item.active::after {
+  content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; font-weight: 700; text-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+}
+/* 背景图上传 */
+.bg-preview {
+  width: 100%; height: 70px; border-radius: 8px; margin-top: 8px;
+  background-size: cover; background-position: center;
+  border: 1px dashed #d5deee; display: flex; align-items: center; justify-content: center;
+  color: #b6c2d2; font-size: 12px;
+}
+.theme-panel-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+
 /* ---------- 管理后台 ---------- */
 .admin-panel {
-  position: fixed; inset: 0; background: #f0f4fa; z-index: 50;
+  position: fixed; inset: 0; background: rgba(240, 244, 250, .96); z-index: 50;
   padding: 28px; overflow-y: auto;
 }
+/* 反馈统计：up/down 数字卡片 */
+.fb-stats-cards { display: flex; gap: 14px; margin-bottom: 18px; }
+.fb-stat-card {
+  flex: 1; text-align: center; padding: 18px 0; border-radius: var(--radius-card);
+  background: #fff; border: 1px solid #e6ebf2;
+}
+.fb-stat-num { font-size: 30px; font-weight: 700; }
+.fb-stat-num.up { color: #2fa05a; }
+.fb-stat-num.down { color: #f56c6c; }
+.fb-stat-label { font-size: 12.5px; color: #98a3b3; margin-top: 4px; }
+/* 知识库体检：僵尸文档警告条 + 表内标红 */
+.kb-zombie-tip {
+  margin-bottom: 14px; padding: 10px 16px; border-radius: 10px;
+  background: #fff7e6; border: 1px solid #ffe1b0;
+  color: #b07c20; font-size: 13px;
+}
+.kb-zombie-name { color: #f56c6c; font-weight: 600; }
 .admin-card {
   max-width: 1080px; margin: 0 auto; background: #fff;
-  border-radius: 12px; padding: 22px 28px 28px;
-  box-shadow: 0 6px 24px rgba(31, 91, 190, .10);
+  border-radius: var(--radius-card); padding: 22px 28px 28px;
+  box-shadow: 0 10px 36px rgba(79, 92, 189, .12);
 }
 .admin-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 14px;
 }
-.admin-title { color: #1f5fbe; font-size: 17px; font-weight: 600; display: flex; align-items: center; }
+.admin-title {
+  color: transparent; font-size: 17px; font-weight: 600; display: flex; align-items: center;
+  background: var(--theme-grad); -webkit-background-clip: text; background-clip: text;
+}
 .admin-tabs .el-upload { width: 100%; }
 .admin-actions {
   display: flex; align-items: center; justify-content: space-between;
@@ -190,8 +569,48 @@ body {
         <el-button text @click="logout">
           <el-icon><switch-button /></el-icon>&nbsp;退出登录
         </el-button>
+        <el-button class="theme-toggle" @click="themePanelOpen = !themePanelOpen">🎨 主题</el-button>
       </div>
     </header>
+
+    <!-- 主题设置面板：背景图 + 渐变色板 + 恢复默认（配置存 localStorage 的 themeConfig） -->
+    <div v-if="themePanelOpen" class="theme-panel">
+      <div class="theme-panel-title">个性化设置</div>
+      <div class="theme-section">
+        <div class="theme-section-label">主题色（页面背景渐变）</div>
+        <div class="preset-grid">
+          <div v-for="p in themePresets" :key="p.key"
+               :class="['preset-item', themeConfig.theme === p.key && 'active']"
+               :style="{ background: p.grad }"
+               @click="applyTheme(p.key)"></div>
+        </div>
+      </div>
+      <div class="theme-section">
+        <div class="theme-section-label">聊天区背景图（仅本地保存，不上传服务器）</div>
+        <el-upload :show-file-list="false" accept="image/*" :auto-upload="false" :on-change="onBgUpload">
+          <el-button size="small">上传背景图</el-button>
+        </el-upload>
+        <div v-if="themeConfig.bgImage" class="bg-preview" :style="{ backgroundImage: 'url(' + themeConfig.bgImage + ')' }"></div>
+        <div v-else class="bg-preview">未设置背景图</div>
+      </div>
+      <div class="theme-panel-footer">
+        <el-button size="small" @click="resetTheme">恢复默认</el-button>
+      </div>
+    </div>
+
+    <!-- 点踩原因弹框：预置原因选择 -->
+    <div v-if="fbDialogOpen" class="fb-dialog-mask" @click.self="fbDialogOpen = false">
+      <div class="fb-dialog">
+        <div class="fb-reason-label">这条回答哪里没帮到你？</div>
+        <div v-for="r in fbReasons" :key="r"
+             :class="['fb-reason-option', fbSelectedReason === r && 'selected']"
+             @click="fbSelectedReason = r">{{ r }}</div>
+        <div class="fb-dialog-actions">
+          <el-button size="small" @click="fbDialogOpen = false">取消</el-button>
+          <el-button size="small" type="danger" :disabled="!fbSelectedReason" @click="confirmFeedback">提交</el-button>
+        </div>
+      </div>
+    </div>
 
     <div class="chat-body">
       <!-- 左侧会话列表 -->
@@ -203,21 +622,46 @@ body {
         </div>
         <div class="session-list">
           <div v-for="s in sessions" :key="s.id"
-               :class="['session-item', s.id === currentSessionId && 'active']"
+               :class="['session-item', s.id === currentSessionId && 'active', isSessionSelected(s.id) && 'checked']"
                @click="switchSession(s.id)">
+            <span class="session-check" @click.stop="toggleSelectSession(s.id)"></span>
             <div class="session-title">{{ s.title }}</div>
             <el-icon class="session-del" @click.stop="deleteSession(s.id)"><delete /></el-icon>
           </div>
           <div v-if="!sessions.length" class="session-empty">暂无会话，点击上方按钮开始提问</div>
         </div>
+        <!-- 批量操作卡片：勾选会话后弹出（卡片式，弹性动画） -->
+        <div v-if="selectedSessions.length" class="session-batch-card">
+          <div class="batch-head">
+            <span class="batch-title">批量管理</span>
+            <span class="batch-badge">已选 {{ selectedSessions.length }} 个会话</span>
+          </div>
+          <div class="batch-actions">
+            <button class="batch-btn batch-btn-danger" @click="deleteSelectedSessions">删除选中</button>
+            <button class="batch-btn batch-btn-ghost" @click="selectAllSessions">{{ allSessionsSelected ? '取消全选' : '全选' }}</button>
+          </div>
+          <div class="batch-clear" @click="clearAllSessions">一键清空全部会话</div>
+        </div>
       </aside>
 
       <!-- 右侧聊天区 -->
       <main class="chat-area">
+        <!-- 自定义背景图（localStorage themeConfig.bgImage）：模糊 + 半透明遮罩，保证文字可读 -->
+        <div class="chat-bg" :class="{ visible: !!themeConfig.bgImage }"
+             :style="themeConfig.bgImage ? { backgroundImage: 'url(' + themeConfig.bgImage + ')' } : {}"></div>
+        <div v-if="themeConfig.bgImage" class="chat-bg-overlay"></div>
         <div class="messages" ref="messagesEl">
-          <div v-if="!currentSessionId" class="welcome">
-            <el-icon :size="48" color="#c0c4cc"><chat-dot-round /></el-icon>
-            <p>开始提问吧！支持图书馆、宿舍、食堂等校园事务咨询</p>
+          <!-- 空会话引导页：logo + 欢迎语 + 示例问题（点击直接提问） -->
+          <div v-if="!currentSessionId && !messages.length" class="welcome">
+            <div class="welcome-logo">
+              <el-icon :size="38"><chat-dot-round /></el-icon>
+            </div>
+            <div class="welcome-title">高校学生事务智能问答</div>
+            <div class="welcome-sub">基于知识库的智能问答助手，回答附来源标注，点击下方问题快速开始</div>
+            <div class="welcome-samples">
+              <div class="welcome-samples-label">你可以试试这样问：</div>
+              <div v-for="q in sampleQuestions" :key="q" class="sample-question" @click="askRecommend(q)">{{ q }}</div>
+            </div>
           </div>
           <template v-for="(m, i) in messages" :key="i">
             <div :class="['msg-row', m.role]">
@@ -226,11 +670,28 @@ body {
                 <el-icon v-else><user /></el-icon>
               </div>
               <div class="bubble-wrap">
-                <div :class="['bubble', m.role]"><span v-if="m.typing && !m.content" class="thinking">正在思考…</span>{{ m.content || (m.typing ? '' : ' ') }}<span v-if="m.typing" class="cursor">▍</span></div>
-                <div v-if="m.role === 'assistant' && !m.typing && m.sources && m.sources.length" class="sources">
-                  <el-icon><document /></el-icon>
-                  <span>来源：</span>
-                  <span v-for="(s, j) in m.sources" :key="j" class="source-tag">{{ s }}</span>
+                <div :class="['bubble', m.role]">
+                  <span v-if="m.typing && !m.content" class="thinking" aria-label="正在思考">
+                    <span class="thinking-text">正在思考</span>
+                    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                  </span>{{ m.content || (m.typing ? '' : ' ') }}<span v-if="m.typing" class="cursor">▍</span>
+                </div>
+                <div v-if="m.time" class="msg-time">{{ m.time }}</div>
+                <div v-if="m.role === 'assistant' && !m.typing" class="msg-feedback">
+                  <span :class="['fb-btn', 'up', m.feedback === 'up' && 'active']" @click="sendFeedback(m, 'up')">👍 有帮助</span>
+                  <span :class="['fb-btn', 'down', m.feedback === 'down' && 'active']" @click="sendFeedback(m, 'down')">👎 没帮助</span>
+                </div>
+                <div v-if="m.role === 'assistant' && !m.typing && (m.sources && m.sources.length || m.confidence)" class="sources">
+                  <span v-if="m.confidence" :class="['confidence-tag', confidenceClass(m.confidence)]">相关度：{{ m.confidence }}</span>
+                  <template v-if="m.sources && m.sources.length">
+                    <el-icon><document /></el-icon>
+                    <span>来源：</span>
+                    <span v-for="(s, j) in m.sources" :key="j" class="source-tag">{{ s }}</span>
+                  </template>
+                </div>
+                <div v-if="m.role === 'assistant' && !m.typing && m.recommends && m.recommends.length" class="recommends">
+                  <div class="recommends-title">你可能还想问：</div>
+                  <span v-for="(q, j) in m.recommends" :key="j" class="recommend-chip" @click="askRecommend(q)">{{ q }}</span>
                 </div>
               </div>
             </div>
@@ -240,7 +701,8 @@ body {
         <div class="input-area">
           <el-input v-model="inputText" type="textarea" :rows="3" resize="none"
                     placeholder="输入你的问题，Enter 发送，Shift+Enter 换行"
-                    @keydown.enter.exact.prevent="send" />
+                    @keydown.enter.exact.prevent="send">
+          </el-input>
           <div class="input-footer">
             <span class="hint">回答基于知识库生成，仅供参考</span>
             <el-button type="primary" :loading="sending" :disabled="sending" @click="send">
@@ -275,14 +737,14 @@ body {
               </el-button>
             </div>
             <el-table :data="adminDocs" v-loading="adminDocsLoading" empty-text="暂无文档">
-              <el-table-column prop="id" label="ID" width="70" />
-              <el-table-column prop="filename" label="文件名" show-overflow-tooltip />
+              <el-table-column prop="id" label="ID" width="70" ></el-table-column>
+              <el-table-column prop="filename" label="文件名" show-overflow-tooltip ></el-table-column>
               <el-table-column prop="status" label="状态" width="120">
                 <template #default="{ row }">
                   <el-tag :type="row.status === 'indexed' ? 'success' : 'info'">{{ row.status }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="created_at" label="上传时间" width="190" />
+              <el-table-column prop="created_at" label="上传时间" width="190" ></el-table-column>
               <el-table-column label="操作" width="120">
                 <template #default="{ row }">
                   <el-button size="small" type="danger" @click="deleteDoc(row)">删除</el-button>
@@ -293,14 +755,14 @@ body {
 
           <el-tab-pane label="用户管理" name="users">
             <el-table :data="adminUsers" v-loading="adminUsersLoading" empty-text="暂无用户">
-              <el-table-column prop="id" label="ID" width="70" />
-              <el-table-column prop="username" label="用户名" />
+              <el-table-column prop="id" label="ID" width="70" ></el-table-column>
+              <el-table-column prop="username" label="用户名" ></el-table-column>
               <el-table-column prop="role" label="角色" width="120">
                 <template #default="{ row }">
                   <el-tag :type="row.role === 'admin' ? 'danger' : 'info'">{{ row.role }}</el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="created_at" label="注册时间" width="190" />
+              <el-table-column prop="created_at" label="注册时间" width="190" ></el-table-column>
               <el-table-column label="操作" width="120">
                 <template #default="{ row }">
                   <el-button size="small" type="danger" :disabled="row.role === 'admin'"
@@ -327,6 +789,74 @@ body {
                 {{ w.word }}（{{ w.count }}）
               </el-tag>
             </div>
+          </el-tab-pane>
+
+          <el-tab-pane label="知识库体检" name="kbhealth">
+            <div class="admin-actions">
+              <span class="hint">统计各文档被检索命中的次数，发现"僵尸文档"</span>
+              <el-button :loading="kbHealthLoading" @click="loadKbHealth">
+                <el-icon><refresh /></el-icon>&nbsp;刷新体检
+              </el-button>
+            </div>
+            <div class="fb-stats-cards">
+              <div class="fb-stat-card">
+                <div class="fb-stat-num" style="color:#33415c">{{ kbHealth.total_documents }}</div>
+                <div class="fb-stat-label">文档总数</div>
+              </div>
+              <div class="fb-stat-card">
+                <div class="fb-stat-num" style="color:#33415c">{{ kbHealth.total_chunks }}</div>
+                <div class="fb-stat-label">分块总数</div>
+              </div>
+              <div class="fb-stat-card">
+                <div class="fb-stat-num" style="color:#2fa05a">{{ kbHealth.total_hits }}</div>
+                <div class="fb-stat-label">累计命中次数</div>
+              </div>
+            </div>
+            <div v-if="kbHealth.zombie_documents && kbHealth.zombie_documents.length" class="kb-zombie-tip">
+              ⚠️ 以下 {{ kbHealth.zombie_documents.length }} 篇文档从未被检索命中，建议检查内容质量或删除
+            </div>
+            <el-table :data="kbHealth.documents" empty-text="暂无文档，请先上传并重建索引" border>
+              <el-table-column prop="id" label="ID" width="70"></el-table-column>
+              <el-table-column prop="filename" label="文件名" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <span :class="row.hit_count === 0 && row.status === 'indexed' ? 'kb-zombie-name' : ''">{{ row.filename }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="status" label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag :type="row.status === 'indexed' ? 'success' : 'info'">{{ row.status }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="chunk_count" label="分块数" width="90"></el-table-column>
+              <el-table-column prop="hit_count" label="命中次数" width="110">
+                <template #default="{ row }">
+                  <el-tag :type="row.hit_count > 0 ? 'primary' : 'danger'" size="small" effect="light">{{ row.hit_count }}</el-tag>
+                </template>
+              </el-table-column>
+            </el-table>
+          </el-tab-pane>
+
+          <el-tab-pane label="反馈统计" name="feedback">
+            <div class="admin-actions">
+              <span class="hint">用户对 AI 回答的点赞/点踩统计</span>
+              <el-button :loading="fbStatsLoading" @click="loadFeedbackStats">
+                <el-icon><refresh /></el-icon>&nbsp;刷新
+              </el-button>
+            </div>
+            <div class="fb-stats-cards">
+              <div class="fb-stat-card">
+                <div class="fb-stat-num up">{{ fbStats.up }}</div>
+                <div class="fb-stat-label">👍 有帮助</div>
+              </div>
+              <div class="fb-stat-card">
+                <div class="fb-stat-num down">{{ fbStats.down }}</div>
+                <div class="fb-stat-label">👎 没帮助</div>
+              </div>
+            </div>
+            <el-table :data="fbStats.reasons" empty-text="暂无点踩原因记录" border>
+              <el-table-column prop="reason" label="点踩原因"></el-table-column>
+              <el-table-column prop="count" label="次数" width="120"></el-table-column>
+            </el-table>
           </el-tab-pane>
         </el-tabs>
       </div>
@@ -361,6 +891,13 @@ const app = createApp({
       messages: [],
       inputText: '',
       sending: false,
+      selectedSessions: [],   // 会话多选：勾选的会话 id 列表
+      // 空会话引导页的 3 个领域示例问题（写死，覆盖知识库主要主题）
+      sampleQuestions: [
+        '转专业需要什么条件？',
+        '奖学金怎么申请？',
+        '图书馆的书怎么借？',
+      ],
 
       // 流式打字机状态
       streamSeq: 0,       // 递增使旧流失效
@@ -369,6 +906,23 @@ const app = createApp({
       typingBuf: '',
       pendingDone: null,
       typingMsg: null,
+      pendingQuestion: null,  // 当前流的用户问题（回答完整展示后触发推荐追问用）
+
+      // 推荐追问（回答完成后异步拉取；失败静默）
+      recommendCtrl: null,     // 推荐请求的 AbortController
+      recommendFetchedMsg: null,  // 推荐请求对应的消息（防跨消息竞态）
+
+      // 个性化主题（localStorage 持久化，键名 themeConfig）
+      themePanelOpen: false,
+      themeConfig: { theme: 'blue', bgImage: '' },
+      themePresets: [
+        // 色板用 rgb 格式（pageGradFor 按 rgb 解析派生浅色页面渐变）
+        { key: 'blue',  grad: 'linear-gradient(135deg, rgb(79,124,255) 0%, rgb(106,92,255) 100%)' },
+        { key: 'green', grad: 'linear-gradient(135deg, rgb(43,182,115) 0%, rgb(63,208,160) 100%)' },
+        { key: 'purple',grad: 'linear-gradient(135deg, rgb(180,92,255) 0%, rgb(122,92,255) 100%)' },
+        { key: 'orange',grad: 'linear-gradient(135deg, rgb(255,154,61) 0%, rgb(255,106,92) 100%)' },
+        { key: 'dark',  grad: 'linear-gradient(135deg, rgb(59,66,82) 0%, rgb(46,52,64) 100%)' },
+      ],
 
       // 管理后台
       adminView: '',          // 'docs' | 'users' | 'hotwords'
@@ -379,13 +933,27 @@ const app = createApp({
       adminUsersLoading: false,
       hotwords: [],
       hotwordsLoading: false,
+      // 回答反馈
+      fbReasons: ['答非所问', '信息不准确', '未找到信息', '其他'],
+      fbDialogOpen: false,
+      fbSelectedReason: '',
+      fbTargetMsg: null,       // 待提交点踩的消息对象
+      fbStats: { up: 0, down: 0, reasons: [] },
+      fbStatsLoading: false,
+      // 知识库体检
+      kbHealth: { total_documents: 0, total_chunks: 0, total_hits: 0, documents: [], zombie_documents: [] },
+      kbHealthLoading: false,
     };
   },
   computed: {
     loggedIn() { return !!this.token; },
     isAdmin() { return this.role === 'admin'; },
+    allSessionsSelected() {
+      return this.sessions.length > 0 && this.selectedSessions.length === this.sessions.length;
+    },
   },
   mounted() {
+    this.loadThemeConfig();  // 先应用主题，避免登录页闪一下默认色
     if (this.token) {
       // 恢复登录态后拉一次真实角色（管理入口是否显示以此为准，不轻信 localStorage）
       this.api('/api/auth/me').then(r => r.json()).then(d => {
@@ -398,6 +966,105 @@ const app = createApp({
 
   methods: {
     /* ---------- 基础请求 ---------- */
+    // 相关度徽章样式：后端返回 高/中/低（检索最高相似度经 config 阈值映射）
+    confidenceClass(c) { return { '高': 'confidence-high', '中': 'confidence-mid', '低': 'confidence-low' }[c] || 'confidence-low'; },
+
+    /* ---------- 消息时间格式化 ---------- */
+    // 同一天只显示 HH:mm；跨天显示日期（跨年带年份）；非法时间返回空
+    formatMsgTime(iso) {
+      if (!iso) return '';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      const now = new Date();
+      const sameDay = d.getFullYear() === now.getFullYear()
+        && d.getMonth() === now.getMonth()
+        && d.getDate() === now.getDate();
+      const pad = n => String(n).padStart(2, '0');
+      if (sameDay) return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      if (d.getFullYear() === now.getFullYear()) return `${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    },
+
+    /* ---------- 个性化主题（背景图 + 渐变色板，localStorage 持久化） ---------- */
+    loadThemeConfig() {
+      try {
+        const raw = localStorage.getItem('themeConfig');
+        if (raw) {
+          const cfg = JSON.parse(raw);
+          if (cfg && typeof cfg === 'object') {
+            if (cfg.theme && this.themePresets.some(p => p.key === cfg.theme)) this.themeConfig.theme = cfg.theme;
+            if (typeof cfg.bgImage === 'string') this.themeConfig.bgImage = cfg.bgImage;
+          }
+        }
+      } catch (e) { /* 配置损坏：静默退回默认 */ }
+      this.applyThemeColor();
+    },
+    saveThemeConfig() {
+      try {
+        localStorage.setItem('themeConfig', JSON.stringify({
+          theme: this.themeConfig.theme,
+          bgImage: this.themeConfig.bgImage,
+        }));
+      } catch (e) {
+        // 图片过大超 localStorage 配额：放弃背景图保留主题色，静默降级
+        if (this.themeConfig.bgImage) this.themeConfig.bgImage = '';
+        this.$message.warning('背景图太大无法保存，已为您保留主题色设置');
+      }
+    },
+    // 把主题色映射成页面背景渐变写入 --page-bg（暗色用深色渐变）
+    applyThemeColor() {
+      const preset = this.themePresets.find(p => p.key === this.themeConfig.theme) || this.themePresets[0];
+      const grad = preset.key === 'dark'
+        ? 'linear-gradient(160deg, #3b4252 0%, #2e3440 55%, #232733 100%)'
+        : this.pageGradFor(preset.grad);
+      document.documentElement.style.setProperty('--page-bg', grad);
+    },
+    // 由主题渐变派生出低饱和浅色页面渐变（登录页 + 聊天区外的大背景）。
+    // 色板统一 rgb 格式；为防将来有人改回 hex，这里也兼容 #rrggbb 解析
+    pageGradFor(grad) {
+      const hexToRgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+      const colors = [...grad.matchAll(/(?:rgb\((\d+),\s*(\d+),\s*(\d+)\)|#([0-9a-fA-F]{6}))/g)]
+        .map(m => m[1] ? [+m[1], +m[2], +m[3]] : hexToRgb(m[4]));
+      const lighten = (c, a) => `rgb(${Math.round(c[0] + (255 - c[0]) * a)}, ${Math.round(c[1] + (255 - c[1]) * a)}, ${Math.round(c[2] + (255 - c[2]) * a)})`;
+      if (!colors.length) return grad;  // 解析不出色值时原样返回，不崩溃
+      const c1 = lighten(colors[0], .80), c2 = lighten(colors[1] || colors[0], .85), c3 = lighten(colors[0], .87);
+      return `linear-gradient(160deg, ${c1} 0%, ${c2} 45%, ${c3} 100%)`;
+    },
+    applyTheme(key) {
+      this.themeConfig.theme = key;
+      this.applyThemeColor();
+      this.saveThemeConfig();
+    },
+    // 上传背景图：canvas 压缩到最长边 1200px / JPEG 0.8，转 base64 存 localStorage（不上传后端）
+    onBgUpload(file) {
+      const raw = file.raw;
+      if (!raw || !raw.type.startsWith('image/')) { this.$message.warning('请选择图片文件'); return; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxSide = 1200;
+          const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          this.themeConfig.bgImage = canvas.toDataURL('image/jpeg', 0.8);
+          this.saveThemeConfig();
+          this.$message.success('背景图已应用（仅保存在本地浏览器）');
+        };
+        img.onerror = () => this.$message.error('图片加载失败，请换一张试试');
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(raw);
+    },
+    resetTheme() {
+      this.themeConfig = { theme: 'blue', bgImage: '' };
+      this.applyThemeColor();
+      try { localStorage.removeItem('themeConfig'); } catch (e) {}
+      this.$message.success('已恢复默认主题');
+    },
+
     async api(path, opts = {}) {
       const headers = { ...(opts.headers || {}) };
       // FormData（文件上传）不能手动指定 Content-Type：boundary 分隔符必须由浏览器
@@ -471,6 +1138,7 @@ const app = createApp({
       this.currentSessionId = null;
       this.messages = [];
       this.inputText = '';
+      this.selectedSessions = [];
       this.adminView = '';
       this.adminDocs = [];
       this.adminUsers = [];
@@ -491,6 +1159,7 @@ const app = createApp({
       this.invalidateStream();          // 中止当前流
       this.currentSessionId = null;
       this.messages = [];
+      this.selectedSessions = [];
     },
 
     async switchSession(id) {
@@ -500,11 +1169,73 @@ const app = createApp({
       try {
         const res = await this.api(`/api/chat/sessions/${id}/messages`);
         const data = await res.json();
-        this.messages = data.map(m => ({ role: m.role, content: m.content, sources: [], typing: false }));
+        // 历史消息带 created_at / id / 反馈状态：后端返回 ISO 时间，前端按"同日显时间/跨日显日期"格式化
+        this.messages = data.map(m => ({
+          role: m.role, content: m.content,
+          sources: [], recommends: [], confidence: '',
+          time: this.formatMsgTime(m.created_at),
+          id: m.id, feedback: m.feedback || '', feedbackReason: m.reason || '',
+          typing: false,
+        }));
         this.scrollToBottom();
       } catch (e) {
         this.$message.error(e.message);
       }
+    },
+
+    /* ---------- 会话多选 / 批量删除 ---------- */
+    isSessionSelected(id) { return this.selectedSessions.includes(id); },
+
+    toggleSelectSession(id) {
+      const i = this.selectedSessions.indexOf(id);
+      if (i >= 0) this.selectedSessions.splice(i, 1);
+      else this.selectedSessions.push(id);
+    },
+
+    selectAllSessions() {
+      this.selectedSessions = this.allSessionsSelected
+        ? []
+        : this.sessions.map(s => s.id);
+    },
+
+    async deleteSelectedSessions() {
+      const ids = this.selectedSessions;
+      if (!ids.length) return;
+      try {
+        await this.$confirm(`确定删除选中的 ${ids.length} 个会话？聊天记录不可恢复。`, '批量删除', { type: 'warning' });
+      } catch (e) { return; }
+      try {
+        await this.api('/api/chat/sessions', { method: 'DELETE', body: JSON.stringify({ ids }) });
+        this.$message.success(`已删除 ${ids.length} 个会话`);
+        this.handleSessionsDeleted(ids);
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    async clearAllSessions() {
+      if (!this.sessions.length) return;
+      try {
+        await this.$confirm('将清空全部会话及聊天记录，且不可恢复，确定继续？', '一键清空', { type: 'warning' });
+      } catch (e) { return; }
+      try {
+        await this.api('/api/chat/sessions', { method: 'DELETE', body: JSON.stringify({ ids: [] }) });
+        this.$message.success('已清空全部会话');
+        this.handleSessionsDeleted(this.sessions.map(s => s.id));
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    // 删除后的状态收尾：清空勾选、刷新列表；若当前会话被删则回到空会话页
+    handleSessionsDeleted(ids) {
+      this.selectedSessions = this.selectedSessions.filter(id => !ids.includes(id));
+      if (ids.includes(this.currentSessionId)) {
+        this.invalidateStream();
+        this.currentSessionId = null;
+        this.messages = [];
+      }
+      this.loadSessions();
     },
 
     async deleteSession(id) {
@@ -514,6 +1245,7 @@ const app = createApp({
       try {
         await this.api(`/api/chat/sessions/${id}`, { method: 'DELETE' });
         this.$message.success('已删除');
+        this.selectedSessions = this.selectedSessions.filter(sid => sid !== id);
         if (this.currentSessionId === id) {
           this.currentSessionId = null;
           this.messages = [];
@@ -525,9 +1257,39 @@ const app = createApp({
     },
 
     /* ---------- 发消息（SSE 流式 + 打字机） ---------- */
-    async send() {
+    send() {
       const question = this.inputText.trim();
-      if (!question || this.sending) return;
+      if (!question) return;
+      this.sendQuestion(question);
+    },
+
+    // 点击推荐问题：直接作为新问题发送（复用 sendQuestion，保证流式/记录逻辑一致）
+    askRecommend(q) {
+      if (this.sending) return;
+      this.sendQuestion(q);
+    },
+
+    // 从当前消息列表取最近 3 轮已完成对话（user/assistant 配对），各截 100 字。
+    // 仅用于后端理解"它/那"等指代；刚 push 的本轮 user 消息和占位的 assistant 消息要排除
+    buildHistory() {
+      const pairs = [];
+      const msgs = this.messages.slice(0, -2);  // 去掉刚 push 的 user 问题 + assistant 占位
+      for (const m of msgs) {
+        if (m.typing) continue;  // 未完成的流不进入历史
+        if (m.role === 'user') {
+          pairs.push({ question: m.content, answer: '' });
+        } else if (m.role === 'assistant' && pairs.length) {
+          pairs[pairs.length - 1].answer = m.content;
+        }
+      }
+      return pairs.slice(-3).map(p => ({
+        question: (p.question || '').slice(0, 100),
+        answer: (p.answer || '').slice(0, 100),
+      }));
+    },
+
+    async sendQuestion(question) {
+      if (this.sending) return;
 
       let sessionId = this.currentSessionId;
       if (!sessionId) {
@@ -547,25 +1309,30 @@ const app = createApp({
       }
 
       this.inputText = '';
-      this.messages.push({ role: 'user', content: question });
+      const nowIso = new Date().toISOString();
+      this.messages.push({ role: 'user', content: question, time: this.formatMsgTime(nowIso) });
       // 关键：必须用 reactive() 包一层再存引用。若保存普通对象并在定时器里直接改它，
       // 修改会绕过 Vue 的响应式代理，界面不刷新——表现为一直"正在思考"，
       // 直到输入框打字触发一次无关的重新渲染才冒出整段答案。
-      const aiMsg = Vue.reactive({ role: 'assistant', content: '', sources: [], typing: true });
+      const aiMsg = Vue.reactive({ role: 'assistant', content: '', sources: [], recommends: [], confidence: '', time: this.formatMsgTime(nowIso), id: null, feedback: '', feedbackReason: '', typing: true });
       this.messages.push(aiMsg);
       this.sending = true;
       this.scrollToBottom();
+
+      // 带最近 3 轮历史（后端仅用于理解"它/那"等指代；服务端有库中记录时以其为准）
+      const body = { question, history: this.buildHistory() };
 
       const seq = ++this.streamSeq;
       this.typingBuf = '';
       this.pendingDone = null;
       this.typingMsg = aiMsg;
+      this.pendingQuestion = question;
       this.startTyping(aiMsg, seq);
 
       const controller = new AbortController();
       this.streamController = controller;
       try {
-        await this.streamRequest(`/api/chat/sessions/${sessionId}/messages/stream`, { question }, seq, controller.signal);
+        await this.streamRequest(`/api/chat/sessions/${sessionId}/messages/stream`, body, seq, controller.signal);
       } catch (e) {
         if (seq === this.streamSeq) {
           this.finishStream(aiMsg, seq, e.message);  // 网络错误：清 loading + 兜底文案（Abort 不提示）
@@ -576,6 +1343,46 @@ const app = createApp({
           this.streamController = null;
         }
       }
+      // 推荐追问不在这里触发：收尾（含 canRecommend 判定）由打字机把缓冲打完后
+      // 统一在 finishStream 里执行，保证回答完整展示后再拉推荐
+    },
+
+    // 拉"你可能还想问"：基于刚问过的问题，由后端用检索 top-3 块让 DeepSeek 生成。
+    // 每条消息只拉一次；10 秒超时保险 + 任何失败静默忽略（推荐是锦上添花）
+    fetchRecommend(msg, question) {
+      if (msg.recommendsFetched) return;
+      msg.recommendsFetched = true;
+      const ctrl = new AbortController();
+      this.recommendCtrl = ctrl;
+      this.recommendFetchedMsg = msg;
+      // 10 秒超时保险：AbortSignal.timeout 不可用时退回 setTimeout abort
+      const sig = window.AbortSignal && AbortSignal.timeout
+        ? AbortSignal.timeout(10000)
+        : (setTimeout(() => ctrl.abort(), 10000), ctrl.signal);
+      fetch(this.apiBase + '/api/chat/recommend?question=' + encodeURIComponent(question), {
+        headers: this.token ? { 'Authorization': 'Bearer ' + this.token } : {},
+        signal: sig,
+      })
+        .then(res => (res.ok ? res.json() : Promise.reject(new Error('recommend failed'))))
+        .then(d => {
+          // 会话已切换/退出：丢弃旧结果（seq 校验交给 streamSeq，这里只防同消息竞态）
+          if (this.recommendFetchedMsg === msg && Array.isArray(d.questions)) {
+            msg.recommends = d.questions.slice(0, 3);
+          }
+        })
+        .catch(() => {})   // 超时/网络失败/解析失败：静默降级，不显示推荐
+        .finally(() => {
+          if (this.recommendCtrl === ctrl) {
+            this.recommendCtrl = null;
+            this.recommendFetchedMsg = null;
+          }
+        });
+    },
+
+    abortRecommend() {
+      if (this.recommendCtrl) this.recommendCtrl.abort();
+      this.recommendCtrl = null;
+      this.recommendFetchedMsg = null;
     },
 
     async streamRequest(path, body, seq, signal) {
@@ -613,7 +1420,7 @@ const app = createApp({
           }
         }
       }
-      // 流结束（连接正常关闭）：缓冲里还有 token 或没等到 done 时，做兜底收尾
+      // 流结束（连接正常关闭）：缓冲里还有未拆帧的 data 时补处理一次
       if (seq !== this.streamSeq) throw new Error('aborted');
       if (buf.trim()) {
         for (const line of buf.split('\n')) {
@@ -626,6 +1433,9 @@ const app = createApp({
       if (seq === this.streamSeq && !this.pendingDone && !this.typingMsg) {
         throw new Error('流已结束，但未收到完整回答');
       }
+      // 不在这里提前 finishStream：那会丢掉打字机缓冲里还没打出的 token（回答截断，
+      // 切换页面后从库里读到完整答案的假象），兜底场景下 done 里的三段式替换也来不及
+      // 执行。收尾统一由打字机把缓冲打完后执行（startTyping 的 pendingDone 分支）
     },
 
     // 中止当前流：切换会话 / 退出登录 / 新流开始前调用
@@ -633,26 +1443,37 @@ const app = createApp({
       this.streamSeq++;                    // 旧流事件全部失效
       if (this.streamController) this.streamController.abort();
       this.streamController = null;
+      this.abortRecommend();               // 同时中止在途的推荐请求
       this.sending = false;
       clearInterval(this.typingTimer);
       this.typingTimer = null;
       this.typingBuf = '';
       this.pendingDone = null;
       this.typingMsg = null;
+      this.pendingQuestion = null;
     },
 
     // 结束打字机：清 loading；传 errMsg 且尚无内容时显示兜底文案
-    finishStream(msg, seq, errMsg) {
+    // recommendAllowed：后端判定回答与知识库相关时才允许拉推荐（兜底回复/未命中不推推荐）
+    finishStream(msg, seq, errMsg, recommendAllowed) {
       if (!msg || seq !== this.streamSeq) return;
       msg.typing = false;
       if (errMsg && !msg.content) msg.content = '（' + errMsg + '）';
       if (!msg.sources) msg.sources = [];
+      if (recommendAllowed === true) msg.canRecommend = true;
       clearInterval(this.typingTimer);
       this.typingTimer = null;
       this.typingBuf = '';
       this.pendingDone = null;
       this.typingMsg = null;
       this.scrollToBottom();
+      // 回答已完整展示后，才异步拉推荐追问（失败/超时静默降级）。
+      // 兜底回复（relevant=false）与出错（errMsg）都不推推荐
+      const question = this.pendingQuestion;
+      this.pendingQuestion = null;
+      if (!errMsg && msg.canRecommend && msg.content && question) {
+        this.fetchRecommend(msg, question);
+      }
     },
 
     onStreamEvent(ev) {
@@ -674,10 +1495,20 @@ const app = createApp({
           msg.content += this.typingBuf.slice(0, 3);   // 每次打 3 个字
           this.typingBuf = this.typingBuf.slice(3);
           this.scrollToBottom();
+        } else if (this.pendingDone && this.pendingDone.relevant === false) {
+          // 兜底回复：LLM 逐字打出的"资料库中未找到相关信息。"原句直接丢弃，
+          // 立即切换成三段式引导回复（不打字机，避免先闪出拒绝原句再替换）
+          msg.content = this.pendingDone.answer;
+          msg.sources = [];
+          msg.confidence = this.pendingDone.confidence || '低';
+          msg.id = this.pendingDone.message_id || null;  // 反馈需要消息 id
+          this.finishStream(msg, seq, null, false);
         } else if (this.pendingDone) {
           msg.content = this.pendingDone.answer;       // 收尾：与后端完整答案一致
           msg.sources = this.pendingDone.sources || [];
-          this.finishStream(msg, seq, null);
+          msg.confidence = this.pendingDone.confidence || '低';
+          msg.id = this.pendingDone.message_id || null;  // 反馈需要消息 id
+          this.finishStream(msg, seq, null, this.pendingDone.relevant === true);
         } else if (!msg.typing) {
           clearInterval(this.typingTimer);             // 出错后停止
         }
@@ -699,8 +1530,68 @@ const app = createApp({
         this.loadAdminDocs();
         this.loadAdminUsers();
         this.loadHotwords();
+        this.loadFeedbackStats();
+        this.loadKbHealth();
       } else {
         this.adminView = '';
+      }
+    },
+
+    /* ---------- 回答反馈 ---------- */
+    // 👍 直接提交；👎 弹原因选择框（选完确认才提交）
+    sendFeedback(msg, feedback) {
+      if (!msg.id) { this.$message.warning('消息尚未保存，请稍后再试'); return; }
+      if (feedback === 'up') {
+        this.submitFeedbackApi(msg, 'up', null);
+      } else {
+        this.fbTargetMsg = msg;
+        this.fbSelectedReason = '';
+        this.fbDialogOpen = true;
+      }
+    },
+    async submitFeedbackApi(msg, feedback, reason) {
+      try {
+        await this.api('/api/chat/feedback', {
+          method: 'POST',
+          body: JSON.stringify({ message_id: msg.id, feedback, reason }),
+        });
+        msg.feedback = feedback;
+        msg.feedbackReason = reason || '';
+        this.$message.success(feedback === 'up' ? '感谢你的反馈！' : '已记录，我们会持续改进');
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+    confirmFeedback() {
+      if (!this.fbSelectedReason || !this.fbTargetMsg) return;
+      const msg = this.fbTargetMsg;
+      const reason = this.fbSelectedReason;
+      this.fbDialogOpen = false;
+      this.fbTargetMsg = null;
+      this.submitFeedbackApi(msg, 'down', reason);
+    },
+
+    async loadFeedbackStats() {
+      this.fbStatsLoading = true;
+      try {
+        const res = await this.api('/api/admin/stats/feedback');
+        this.fbStats = await res.json();
+      } catch (e) {
+        this.$message.error(e.message);
+      } finally {
+        this.fbStatsLoading = false;
+      }
+    },
+
+    async loadKbHealth() {
+      this.kbHealthLoading = true;
+      try {
+        const res = await this.api('/api/admin/kb-health');
+        this.kbHealth = await res.json();
+      } catch (e) {
+        this.$message.error(e.message);
+      } finally {
+        this.kbHealthLoading = false;
       }
     },
 
