@@ -1,0 +1,22 @@
+# 高校学生事务智能问答系统 - 一键 Docker 部署
+# 用法：docker compose up -d --build  （或双击 start-docker.bat）
+services:
+  campus-qa:
+    build: .
+    container_name: campus-qa
+    ports:
+      - "8000:8000"
+    # 从 backend/.env 注入 API Key（DeepSeek / 硅基流动），Key 不写入镜像
+    env_file:
+      - backend/.env
+    environment:
+      # 数据（SQLite + 知识库 + 索引）统一放 /data 卷，升级镜像不丢数据
+      - DATABASE_URL=sqlite:////data/campus_qa.db
+      - UPLOAD_DIR=/data/uploads
+      - FAISS_INDEX_DIR=/data/faiss_index
+    volumes:
+      - campus_data:/data
+    restart: unless-stopped
+
+volumes:
+  campus_data:

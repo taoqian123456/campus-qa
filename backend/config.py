@@ -16,11 +16,12 @@ APP_NAME = "高校学生事务智能问答系统"
 APP_VERSION = "0.1.0"
 
 # ---------- 数据库 ----------
-DATABASE_URL = f"sqlite:///{(BASE_DIR / 'campus_qa.db').as_posix()}"
+# Docker 部署时用环境变量覆盖到挂载卷（如 sqlite:////data/campus_qa.db）
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{(BASE_DIR / 'campus_qa.db').as_posix()}")
 
 # ---------- 目录 ----------
-UPLOAD_DIR = BASE_DIR / "uploads"        # 上传的知识库文档
-FAISS_INDEX_DIR = BASE_DIR / "faiss_index"  # 向量索引
+UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(BASE_DIR / "uploads")))        # 上传的知识库文档
+FAISS_INDEX_DIR = Path(os.getenv("FAISS_INDEX_DIR", str(BASE_DIR / "faiss_index")))  # 向量索引
 
 UPLOAD_DIR.mkdir(exist_ok=True)
 FAISS_INDEX_DIR.mkdir(exist_ok=True)

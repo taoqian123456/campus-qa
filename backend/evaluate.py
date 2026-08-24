@@ -68,6 +68,7 @@ def main():
     parser = argparse.ArgumentParser(description="RAG 评测：逐题问答并生成打分 CSV")
     parser.add_argument("--chunk_size", type=int, default=None, help="覆盖 config.CHUNK_SIZE（触发重建索引）")
     parser.add_argument("--top_k", type=int, default=None, help="覆盖 config.TOP_K（不重建索引）")
+    parser.add_argument("--mode", type=str, default=None, choices=["hybrid", "vector"], help="检索模式（默认用 config.RETRIEVAL_MODE；对比实验传 vector 跑纯向量基线）")
     parser.add_argument("--eval_set", type=str, default="eval_set.json", help="评测集路径（默认 backend/eval_set.json）")
     parser.add_argument("--output", type=str, default=None, help="输出 CSV 路径（默认 eval_results_c{chunk}_k{top}.csv）")
     parser.add_argument("--no_rebuild", action="store_true", help="即使指定了 --chunk_size 也不重建索引（已有对应索引时用）")
@@ -80,6 +81,8 @@ def main():
     eval_set_path = BASE_DIR / args.eval_set
     items = load_eval_set(eval_set_path)
     notes = apply_overrides(args.chunk_size, args.top_k)
+    if args.mode:
+        notes += f", mode={args.mode}"
     print(f"评测集：{eval_set_path}（{len(items)} 题）")
     print(f"参数：{notes}")
     print("=" * 70)
@@ -105,7 +108,7 @@ def main():
         print(f"参考要点：{reference}")
         t0 = time.perf_counter()
         try:
-            result = answer_question(question)
+            result = answer_question(question, retrieval_mode=args.mode)
             answer = result["answer"]
             sources = result.get("sources", [])
             print(f"回答：{answer}")

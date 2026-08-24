@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# 本地生成物
+*.db
+faiss_index/
+uploads/
+
+# 编辑器
+.vscode/
+.idea/
