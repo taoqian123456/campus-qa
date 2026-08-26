@@ -80,6 +80,105 @@ backend/
 > 文件中，不会上传到任何服务器、不会写入数据库、不会进入 Docker 镜像（.env 已加入
 > .gitignore 与 .dockerignore）。
 
+## 下一步：评测与论文实验
+
+系统功能已开发完成（认证 / RAG 问答 / 会话 / 管理后台 / 多模型），实验数据用以下脚本产出：
+
+- **论文第 6 章对比实验**：67 题评测集（`backend/eval_set.json`）跑不同参数/模型后人工打分。
+  常用命令（在 backend/ 目录、虚拟环境激活状态下）：
+  ```bash
+  python evaluate.py --chunk_size 400 --top_k 5 --mode hybrid              # 参数对比（会重建索引）
+  python evaluate.py --top_k 8 --mode hybrid --provider zhipu              # 多模型对比（不重建索引）
+  python evaluate_retrieval.py --top_k 5                                   # 检索命中率 Hit@k（不调 LLM）
+  python perf_test.py --provider deepseek                                  # 问答耗时
+  ```
+  生成的 CSV 可用 `python csv_to_xlsx.py` 转成 xlsx（宽列 + 表头样式），在 Excel/WPS 里
+  给"相关性/忠实度"打分。跑完记得用管理后台"重建索引"恢复正式参数（.env：c400/k8/混合）。
+- **答辩演示**：`uvicorn main:app --reload` 启动后访问 http://127.0.0.1:8000/ ，
+  注册一个账号即可演示完整流程（提问 → 来源标注 → 追问推荐 → 模型切换 → 管理后台）。
+
+## Docker 部署
+
+> 目标：**任何人有 Docker 就能一键部署运行**——不需要装 Python、不需要装依赖、不挑操作系统。
+> 文件清单（项目根目录）：`Dockerfile`、`docker-compose.yml`、`start-docker.bat`（Windows）、`start-docker.sh`（Linux/Mac）、`.dockerignore`
+
+### 对使用者的要求
+
+- 安装 **Docker Desktop**（官网 https://www.docker.com/products/docker-desktop/ ；Linux 装 docker + docker compose 插件）
+- 至少配置**一个对话模型 Key**（推荐 DeepSeek）+ **硅基流动 Key**（嵌入模型，必须）
+
+### 部署步骤（3 步）
+
+**第 1 步：拿到项目文件夹** —— 把整个 `campus-qa` 文件夹拷给对方（或用 git 仓库）。
+
+**第 2 步：填 API Key** —— 打开 `backend\.env`（没有就把 `backend\.env.example` 复制成 `.env`）：
+
+必填（系统运行必须）：
+```ini
+DEEPSEEK_API_KEY=sk-你的DeepSeekKey
+EMBEDDING_API_KEY=sk-你的硅基流动Key   # 嵌入模型，向量检索用，必须
+SECRET_KEY=随便写一串随机字符
+```
+
+选填（多模型，想用哪个填哪个，**不填就不显示在前端下拉框**）：
+```ini
+LLM_PROVIDER=deepseek                # 默认对话模型：deepseek / zhipu / dashscope / moonshot / siliconflow / ollama
+ZHIPU_API_KEY=sk-你的智谱key         # 智谱 GLM（glm-4-flash 免费）
+DASHSCOPE_API_KEY=sk-你的通义key     # 阿里通义 qwen-plus
+MOONSHOT_API_KEY=sk-你的kimi key     # Kimi
+SILICONFLOW_API_KEY=sk-你的硅基流动key  # 硅基流动上的其他模型
+```
+
+> 🔒 **隐私安全**：Key 只写在本机 `.env` 里，通过 docker-compose 的 env_file 注入容器——
+> Key 不会进入镜像、不会入库、不会出现在任何代码和文档中。本项目只使用你自己的 Key，不收集不上传。
+
+**第 3 步：启动** —— Windows 双击 `start-docker.bat`；Linux/Mac 执行 `./start-docker.sh`。
+首次构建约 5-10 分钟（下载镜像+依赖），之后启动秒开。完成后浏览器打开 **http://localhost:8000** 即可使用。
+
+### 多模型切换怎么用（部署后）
+
+1. 登录后**顶栏有模型下拉框**，直接切换 DeepSeek / 智谱 / 通义等（前提是 .env 里填了对应 Key）
+2. 每条 AI 回答下方显示"由 xx 生成"，方便对比不同模型效果
+3. 想固定默认模型：改 `.env` 里 `LLM_PROVIDER=zhipu` 一行 → 重启容器
+
+> ⚠️ **Ollama 特殊说明**：Ollama 是跑在宿主机上的本地模型，容器内无法用 `localhost` 访问宿主机。
+> 要在 Docker 部署下用 Ollama，`.env` 里写 `OLLAMA_BASE_URL=http://host.docker.internal:11434/v1`
+> （Linux 还需在 compose 加 `extra_hosts: host.docker.internal:host-gateway`）。普通用户直接用云端模型即可。
+
+### 知识库文档怎么进系统
+
+1. **网页上传（推荐）**：注册管理员 → 管理后台 → 知识库管理 → 上传 PDF/TXT/DOCX → 点"重建索引"
+2. **放进数据卷**：`docker cp 你的文档.pdf campus-qa:/data/uploads/` 后在管理后台点"重建索引"
+3. **项目自带知识库**：把文档放在 `backend\uploads\knowledge_base\` 再构建镜像（不建议——更新文档要重建镜像）
+
+> ⚠️ 上传扫描版 PDF 时，容器首次 OCR 需要联网下载识别模型（约 15MB），之后有缓存。
+
+### 数据与升级
+
+| 事项 | 说明 |
+|---|---|
+| 数据存在哪 | Docker 卷 `campus_data`（SQLite + uploads + 索引），容器删了数据还在 |
+| 备份数据 | `docker run --rm -v campus_data:/data -v %cd%:/backup alpine tar czf /backup/data-backup.tar.gz /data`（Windows 用 %cd%） |
+| 升级代码 | 重新 `docker compose up -d --build`，数据不丢 |
+| 停用/启用 | `docker compose down` / `docker compose up -d` |
+| 看日志 | `docker compose logs -f` |
+
+### 部署常见问题
+
+| 问题 | 解决 |
+|---|---|
+| 启动后页面打不开 | `docker compose logs` 看日志；确认 8000 端口没被占用（占用就改 docker-compose.yml 的 `"8000:8000"` 为 `"8001:8000"`） |
+| 报 API Key 错误 | 检查 backend/.env 的 key 是否正确、是否在 compose 构建**之后**才改的（改了要 `docker compose up -d` 重启容器） |
+| 问答报嵌入错误 | 硅基流动 key 余额/额度问题，去 https://siliconflow.cn 检查 |
+| 重建索引很慢 | 正常：扫描版 PDF 要逐页 OCR，耐心等 |
+| 想换端口 | 改 docker-compose.yml 的 ports 映射 |
+
+### 部署的用处（论文/答辩素材）
+
+1. **论文第 5 章**：系统部署一节可写"基于 Docker 容器化部署，环境无关、一键启动"，附 docker-compose.yml 核心配置
+2. **答辩演示**：换一台没装过 Python 的电脑，装 Docker 就能现场跑起来
+3. **简历**："通过 Docker 容器化封装部署，实现环境无关的一键部署"是工程能力加分项
+4. **给导师/同学试用**：把 campus-qa 文件夹发过去，3 步跑起来
 
 ## 常见问题
 

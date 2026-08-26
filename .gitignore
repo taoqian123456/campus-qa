@@ -1,2 +1,4 @@
-# 文档：暂不上传
+# 文档：除 README 与知识库 sources 外，一律不上传
 *.md
+!**/README.md
+!**/knowledge_base/sources.md
