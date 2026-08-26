@@ -505,6 +505,26 @@ def _extract_sources(answer: str, source_map: dict) -> list[str]:
     return cited
 
 
+def available_llm_providers() -> list[str]:
+    """返回"已配置、可直接使用"的厂商列表（/api/models 下拉框只显示这些，避免用户选中后报错）。
+
+    判定规则：
+    - 云端厂商：api_key_env 对应的环境变量非空，且不是 .env.example 的占位值（占位值含"你的"字样）；
+    - 本地 Ollama 无 Key 概念：显式配置过 OLLAMA_BASE_URL / OLLAMA_CHAT_MODEL 才算"想用"
+      （模板里的默认行 OLLAMA_API_KEY=ollama 不算）。
+    """
+    avail: list[str] = []
+    for name, cfg in LLM_PROVIDERS.items():
+        if name == "ollama":
+            if "OLLAMA_BASE_URL" in os.environ or "OLLAMA_CHAT_MODEL" in os.environ:
+                avail.append(name)
+            continue
+        key = os.getenv(cfg["api_key_env"], "").strip()
+        if key and "你的" not in key:
+            avail.append(name)
+    return avail
+
+
 def resolve_llm(provider: str | None = None) -> tuple[str, str, str]:
     """按厂商名从注册表解析出 (base_url, api_key, model)。
 

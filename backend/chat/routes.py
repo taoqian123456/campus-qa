@@ -13,7 +13,7 @@ from auth.deps import get_current_user
 from config import LLM_PROVIDER, LLM_PROVIDERS
 from database import get_db
 from models import ChatSession, Message, User
-from qa.qa_handler import answer_question, answer_question_stream, recommend_questions
+from qa.qa_handler import answer_question, answer_question_stream, available_llm_providers, recommend_questions
 
 router = APIRouter(prefix="/api/chat", tags=["会话"])
 
@@ -34,12 +34,16 @@ class MessageCreate(BaseModel):
 
 def _resolve_provider(provider: str | None) -> str:
     """校验并解析本次请求使用的模型厂商：空 -> 默认厂商（.env 的 LLM_PROVIDER）；
-    不在注册表里 -> 400 并提示可选列表。返回规范化后的厂商 key。"""
+    不在注册表里 -> 400 并提示可选列表；在注册表但未配置 Key -> 同样 400
+    （比等 OpenAI SDK 在流中途抛异常更友好）。返回规范化后的厂商 key。"""
     p = (provider or "").strip()
     if not p:
-        return LLM_PROVIDER
+        p = LLM_PROVIDER
     if p not in LLM_PROVIDERS:
         raise HTTPException(status_code=400, detail=f"不支持的模型 '{p}'，可选：{'、'.join(LLM_PROVIDERS)}")
+    if p not in available_llm_providers():
+        env = LLM_PROVIDERS[p]["api_key_env"]
+        raise HTTPException(status_code=400, detail=f"模型 '{LLM_PROVIDERS[p]['label']}' 未配置，请在 backend/.env 里填 {env}=...")
     return p
 
 
@@ -95,15 +99,18 @@ def _history_pairs(session_id: int, db: Session) -> list[dict]:
 
 @router.get("/models")
 def list_models(current_user: User = Depends(get_current_user)):
-    """可用模型列表（注册表 LLM_PROVIDERS -> 下拉框选项），登录后可调用。
+    """可用模型列表（注册表 -> 前端下拉框选项），登录后可调用。
 
-    前端优先展示用户上次的选择（localStorage），没有时用默认模型；列表内容由服务端
-    统一维护，前端不写死厂商名单。
+    只返回"已配置 Key"的模型：用户不会选中一个必然报错的选项；
+    返回的 default 若未配置（如 .env 设了 LLM_PROVIDER=kimi 但没填 key），回落到
+    已配置列表的第一个。列表内容由服务端统一维护，前端不写死厂商名单。
     """
-    return {
-        "models": [{"id": k, "label": v["label"]} for k, v in LLM_PROVIDERS.items()],
-        "default": LLM_PROVIDER,
-    }
+    models = [{"id": k, "label": v["label"]} for k, v in LLM_PROVIDERS.items()
+              if k in available_llm_providers()]
+    default = LLM_PROVIDER if any(m["id"] == LLM_PROVIDER for m in models) else (
+        models[0]["id"] if models else ""
+    )
+    return {"models": models, "default": default}
 
 
 @router.get("/recommend")

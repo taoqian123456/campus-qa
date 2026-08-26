@@ -1189,7 +1189,8 @@ const app = createApp({
         const res = await this.api('/api/chat/models');
         const d = await res.json();
         this.modelOptions = d.models || [];
-        // localStorage 里的选择已不在服务端注册表中（如部署环境变了）：回落默认
+        // localStorage 里的选择已不在可用列表（服务端只返回已配 key 的模型；
+        // 如部署环境变了或 .env 里删了 key）：回落服务端默认
         if (!this.modelOptions.some(o => o.id === this.preferredProvider)) {
           this.preferredProvider = d.default || (this.modelOptions[0] && this.modelOptions[0].id) || '';
           try { localStorage.removeItem('preferredProvider'); } catch (e) {}
