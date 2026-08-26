@@ -1,6 +1,10 @@
 """
-RAG 问答处理器：检索知识库 -> 组装 Prompt -> 调用 DeepSeek 生成回答。
+RAG 问答处理器：检索知识库 -> 组装 Prompt -> 调用大模型生成回答。
+
+大模型不绑死单一厂商：由 config.LLM_PROVIDERS 注册表 + LLM_PROVIDER 开关决定用哪家
+（见 resolve_llm）。各函数的 provider 参数可临时指定厂商，不传则用 .env 里的默认值。
 """
+import os
 import re
 from pathlib import Path
 
@@ -10,9 +14,8 @@ from openai import OpenAI
 from config import (
     CONFIDENCE_HIGH,
     CONFIDENCE_LOW,
-    DEEPSEEK_API_KEY,
-    DEEPSEEK_BASE_URL,
-    DEEPSEEK_CHAT_MODEL,
+    LLM_PROVIDER,
+    LLM_PROVIDERS,
     MIN_SCORE,
     QUESTION_TYPES,
     THEME_KEYWORDS,
@@ -502,14 +505,46 @@ def _extract_sources(answer: str, source_map: dict) -> list[str]:
     return cited
 
 
-def _get_llm_client() -> OpenAI:
-    return OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_BASE_URL)
+def resolve_llm(provider: str | None = None) -> tuple[str, str, str]:
+    """按厂商名从注册表解析出 (base_url, api_key, model)。
+
+    provider 为空时用 config.LLM_PROVIDER（.env 里 LLM_PROVIDER=xxx 一行即可全局切换）。
+    api_key 按注册表里的 api_key_env 现取环境变量：换厂商只需在 .env 补一行对应的 Key，
+    没配 Key 的厂商也不会在启动时报错。
+    """
+    name = (provider or LLM_PROVIDER or "deepseek").strip()
+    cfg = LLM_PROVIDERS.get(name)
+    if cfg is None:
+        raise ValueError(
+            f"未知的模型厂商 '{name}'，可选：{'、'.join(LLM_PROVIDERS)}（在 .env 里改 LLM_PROVIDER）"
+        )
+
+    base_url, model = cfg["base_url"], cfg["model"]
+    api_key = os.getenv(cfg["api_key_env"], "").strip()
+    if not api_key:
+        if "localhost" in base_url or "127.0.0.1" in base_url:
+            api_key = "ollama"  # 本地部署不校验 Key，占位符满足 OpenAI SDK 的非空要求
+        else:
+            # 云端厂商缺 Key 直接报错：比等接口返回 401 更容易定位
+            raise ValueError(f"{cfg['label']} 未配置 API Key，请在 backend/.env 里填 {cfg['api_key_env']}=...")
+    return base_url, api_key, model
 
 
-def answer_question(question: str, history=None, retrieval_mode: str | None = None):
+def _get_llm_client(provider: str | None = None) -> tuple[OpenAI, str]:
+    """构造 OpenAI 兼容客户端，返回 (客户端, 模型名)。
+
+    注册表里的厂商都提供 OpenAI 兼容接口，所以一个 OpenAI SDK 通吃，只换三要素。
+    模型名与客户端一起返回，避免调用处再解析一次注册表。
+    """
+    base_url, api_key, model = resolve_llm(provider)
+    return OpenAI(api_key=api_key, base_url=base_url), model
+
+
+def answer_question(question: str, history=None, retrieval_mode: str | None = None, provider: str | None = None):
     """非流式 RAG 问答，返回 {"answer": str, "sources": [文件名], "confidence": 高/中/低}。
 
     retrieval_mode：评测对比实验用（'hybrid'/'vector'），生产走 config.RETRIEVAL_MODE。
+    provider：临时指定模型厂商（'deepseek'/'zhipu'/...），不传走 config.LLM_PROVIDER。
     """
     messages, sources, empty_reply, source_map, confidence = _retrieve_and_build(
         question, history, retrieval_mode=retrieval_mode
@@ -519,9 +554,9 @@ def answer_question(question: str, history=None, retrieval_mode: str | None = No
     if empty_reply:
         return {"answer": empty_reply, "sources": [], "confidence": confidence, "relevant": False}
 
-    client = _get_llm_client()
+    client, model = _get_llm_client(provider)
     resp = client.chat.completions.create(
-        model=DEEPSEEK_CHAT_MODEL,
+        model=model,
         temperature=0.3,
         messages=messages,
     )
@@ -541,12 +576,14 @@ def _final_sources(answer: str, sources: list[str], source_map: dict) -> list[st
     return cited or sources
 
 
-def answer_question_stream(question: str, history=None, retrieval_mode: str | None = None):
+def answer_question_stream(question: str, history=None, retrieval_mode: str | None = None, provider: str | None = None):
     """流式 RAG 问答（生成器），逐块 yield 事件字典：
 
     {"type": "token", "content": "..."}  增量文本
     {"type": "done", "answer": 完整答案, "sources": [...], "confidence": 高/中/低}  结束（含最终结果）
     {"type": "error", "message": "..."}  出错
+
+    provider：临时指定模型厂商，不传走 config.LLM_PROVIDER。
     """
     messages, sources, empty_reply, source_map, confidence = _retrieve_and_build(
         question, history, retrieval_mode=retrieval_mode
@@ -556,10 +593,10 @@ def answer_question_stream(question: str, history=None, retrieval_mode: str | No
         yield {"type": "done", "answer": empty_reply, "sources": [], "confidence": confidence, "relevant": False}
         return
 
-    client = _get_llm_client()
+    client, model = _get_llm_client(provider)
     try:
         stream = client.chat.completions.create(
-            model=DEEPSEEK_CHAT_MODEL,
+            model=model,
             temperature=0.3,
             messages=messages,
             stream=True,
@@ -596,9 +633,10 @@ RECOMMEND_SYSTEM_PROMPT = (
 )
 
 
-def recommend_questions(question: str, history=None) -> list[str]:
-    """基于检索到的 top-3 文档块，让 DeepSeek 生成 3 个"用户可能接着问"的问题。
+def recommend_questions(question: str, history=None, provider: str | None = None) -> list[str]:
+    """基于检索到的 top-3 文档块，让大模型生成 3 个"用户可能接着问"的问题。
 
+    provider：临时指定模型厂商，不传走 config.LLM_PROVIDER。
     任何失败（检索为空 / API 超时异常 / 返回解析不出有效问题）都返回 []，
     由调用方静默降级——推荐只是锦上添花，不影响主问答流程。
     """
@@ -630,9 +668,9 @@ def recommend_questions(question: str, history=None) -> list[str]:
     context = "\n\n".join(f"（来源：{r['source']}）\n{r['text'][:200]}" for r in results[:3])
 
     try:
-        client = _get_llm_client()
+        client, model = _get_llm_client(provider)
         resp = client.chat.completions.create(
-            model=DEEPSEEK_CHAT_MODEL,
+            model=model,
             temperature=0.7,  # 比主问答（0.3）高：推荐需要多样性
             messages=[
                 {"role": "system", "content": RECOMMEND_SYSTEM_PROMPT.format(context=context)},
@@ -640,7 +678,7 @@ def recommend_questions(question: str, history=None) -> list[str]:
             ],
         )
     except Exception:
-        return []  # API 超时/网络失败：静默降级
+        return []  # API 超时/网络失败/厂商未配置 Key：静默降级
 
     content = resp.choices[0].message.content or ""
     # 解析：容忍编号前缀（"1. / 1、"），一行一个问句，长度 ≤ 11（10 字 + 问号），去重且不含原问题

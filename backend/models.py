@@ -37,6 +37,9 @@ class Message(Base):
     session_id: Mapped[int] = mapped_column(ForeignKey("sessions.id"), index=True, nullable=False)
     role: Mapped[str] = mapped_column(String(20), nullable=False)  # user / assistant
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    # 本条消息使用的模型厂商（config.LLM_PROVIDERS 的 key，如 deepseek/zhipu）；user 消息无意义，
+    # assistant 消息用于前端展示"本条回答由哪个模型生成"；旧数据默认 deepseek
+    provider: Mapped[str] = mapped_column(String(30), default="deepseek")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     # 回答反馈：up 点赞 / down 点踩（仅 assistant 消息有效）；reply_reason 是点踩原因
     reply_feedback: Mapped[str | None] = mapped_column(String(10), nullable=True)

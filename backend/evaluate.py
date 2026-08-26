@@ -5,11 +5,15 @@ RAG 评测脚本（P8）：读取评测集，逐题问答，生成打分 CSV。
   venv\\Scripts\\python.exe evaluate.py                          # 用当前 config 参数，不重建索引
   venv\\Scripts\\python.exe evaluate.py --chunk_size 400 --top_k 5
   venv\\Scripts\\python.exe evaluate.py --chunk_size 200 --top_k 5 --eval_set eval_set.json --output out.csv
+  venv\\Scripts\\python.exe evaluate.py --provider zhipu         # 换模型评测（多模型对比实验）
 
 说明：
   --chunk_size 变化会重建索引（分块方式变了，不重建没有意义）；重建会覆盖磁盘上的 faiss_index/，
   跑完对比实验后记得用管理后台或 rebuild_index.py 恢复正式参数。
   --top_k 只影响检索条数，不触发重建。
+  --provider 指定回答用的大模型（config.LLM_PROVIDERS 的 key，如 deepseek/zhipu/dashscope），
+  默认不传走 config.LLM_PROVIDER；换模型不重建索引（检索不变，只换生成），
+  与"多模型对比"实验对应（论文第 6 章）。输出文件名自动带 provider 后缀（如 ..._k8_hybrid_zhipu.csv）。
 
 输出 CSV 列：question, answer, reference, 相关性评分(1-5), 忠实度评分(1-5)
 （两个评分列留空，在 Excel 里人工打分；UTF-8 BOM 编码，Excel 直接打开不乱码。）
@@ -69,8 +73,9 @@ def main():
     parser.add_argument("--chunk_size", type=int, default=None, help="覆盖 config.CHUNK_SIZE（触发重建索引）")
     parser.add_argument("--top_k", type=int, default=None, help="覆盖 config.TOP_K（不重建索引）")
     parser.add_argument("--mode", type=str, default=None, choices=["hybrid", "vector"], help="检索模式（默认用 config.RETRIEVAL_MODE；对比实验传 vector 跑纯向量基线）")
+    parser.add_argument("--provider", type=str, default=None, help="回答用的大模型（config.LLM_PROVIDERS 的 key；默认走 config.LLM_PROVIDER）")
     parser.add_argument("--eval_set", type=str, default="eval_set.json", help="评测集路径（默认 backend/eval_set.json）")
-    parser.add_argument("--output", type=str, default=None, help="输出 CSV 路径（默认 eval_results_c{chunk}_k{top}.csv）")
+    parser.add_argument("--output", type=str, default=None, help="输出 CSV 路径（默认 eval_results_c{chunk}_k{top}[_{mode}][_{provider}].csv）")
     parser.add_argument("--no_rebuild", action="store_true", help="即使指定了 --chunk_size 也不重建索引（已有对应索引时用）")
     args = parser.parse_args()
 
@@ -78,11 +83,19 @@ def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
 
+    # 预检模型厂商：未知/未配 Key 在跑题前就报错，别等 67 题逐条失败才发现
+    if args.provider:
+        from qa.qa_handler import resolve_llm
+
+        resolve_llm(args.provider)
+
     eval_set_path = BASE_DIR / args.eval_set
     items = load_eval_set(eval_set_path)
     notes = apply_overrides(args.chunk_size, args.top_k)
     if args.mode:
         notes += f", mode={args.mode}"
+    if args.provider:
+        notes += f", provider={args.provider}"
     print(f"评测集：{eval_set_path}（{len(items)} 题）")
     print(f"参数：{notes}")
     print("=" * 70)
@@ -108,7 +121,7 @@ def main():
         print(f"参考要点：{reference}")
         t0 = time.perf_counter()
         try:
-            result = answer_question(question, retrieval_mode=args.mode)
+            result = answer_question(question, retrieval_mode=args.mode, provider=args.provider)
             answer = result["answer"]
             sources = result.get("sources", [])
             print(f"回答：{answer}")
@@ -128,9 +141,12 @@ def main():
         })
 
     # 输出 CSV（utf-8-sig 带 BOM，Excel 直接打开不乱码）
+    # 默认文件名带参数后缀，多组实验（模式/模型）并排放在一起不会互相覆盖
     c = args.chunk_size or "default"
     k = args.top_k or "default"
-    out_path = Path(args.output) if args.output else BASE_DIR / f"eval_results_c{c}_k{k}.csv"
+    m = f"_{args.mode}" if args.mode else ""
+    p = f"_{args.provider}" if args.provider else ""
+    out_path = Path(args.output) if args.output else BASE_DIR / f"eval_results_c{c}_k{k}{m}{p}.csv"
     with open(out_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow(["question", "answer", "reference", "相关性评分(1-5)", "忠实度评分(1-5)"])

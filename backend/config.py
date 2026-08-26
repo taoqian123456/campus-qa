@@ -1,5 +1,5 @@
 """
-全局配置：数据库、上传目录、DeepSeek API 等
+全局配置：数据库、上传目录、大模型（多厂商可切换）等
 所有可调参数都从这里读取，改参数不用改代码。
 """
 import os
@@ -35,6 +35,53 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 DEEPSEEK_CHAT_MODEL = os.getenv("DEEPSEEK_CHAT_MODEL", "deepseek-chat")
 
+# ---------- 多模型注册表（配置化切换，答辩素材：系统不绑死单一厂商） ----------
+# 这些厂商都提供 OpenAI 兼容接口，所以换模型只需换 base_url / api_key / model 三要素，
+# 业务代码（qa_handler 的 RAG 链路）零改动。新增厂商 = 在这里加一条。
+# api_key_env 存的是"环境变量名"而不是 Key 本身：Key 由 qa_handler.resolve_llm 现取，
+# 避免把六个厂商的 Key 都固化成 config 常量（没配的厂商也不会报错）。
+LLM_PROVIDERS = {
+    "deepseek": {
+        "label": "DeepSeek",
+        "base_url": os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com"),
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "model": os.getenv("DEEPSEEK_CHAT_MODEL", "deepseek-chat"),
+    },
+    "zhipu": {
+        "label": "智谱 GLM",
+        "base_url": os.getenv("ZHIPU_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
+        "api_key_env": "ZHIPU_API_KEY",
+        "model": os.getenv("ZHIPU_CHAT_MODEL", "glm-4-flash"),
+    },
+    "dashscope": {
+        "label": "阿里通义",
+        "base_url": os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"),
+        "api_key_env": "DASHSCOPE_API_KEY",
+        "model": os.getenv("DASHSCOPE_CHAT_MODEL", "qwen-plus"),
+    },
+    "moonshot": {
+        "label": "Kimi",
+        "base_url": os.getenv("MOONSHOT_BASE_URL", "https://api.moonshot.cn/v1"),
+        "api_key_env": "MOONSHOT_API_KEY",
+        "model": os.getenv("MOONSHOT_CHAT_MODEL", "moonshot-v1-8k"),
+    },
+    "siliconflow": {
+        "label": "硅基流动",
+        "base_url": os.getenv("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1"),
+        "api_key_env": "SILICONFLOW_API_KEY",
+        "model": os.getenv("SILICONFLOW_CHAT_MODEL", "deepseek-ai/DeepSeek-V3"),
+    },
+    "ollama": {
+        "label": "本地 Ollama",
+        "base_url": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
+        "api_key_env": "OLLAMA_API_KEY",
+        "model": os.getenv("OLLAMA_CHAT_MODEL", "qwen2.5:7b"),
+    },
+}
+
+# 默认厂商开关：改 .env 里 LLM_PROVIDER=zhipu 一行即可全局切换（重启生效）
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "deepseek")
+
 # ---------- 嵌入模型（DeepSeek 无嵌入接口，默认用硅基流动 bge-m3） ----------
 # 注册地址 https://siliconflow.cn ，注册后送 2000 万 token 免费额度，bge-m3 约 0.7 元/百万 token
 EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
@@ -48,7 +95,7 @@ TOP_K = int(os.getenv("TOP_K", "10"))                  # 检索返回的块数
 MIN_SCORE = float(os.getenv("MIN_SCORE", "0.25"))  # 检索过滤的低防线（bge-m3 短查询基线高，此值只挡明显垃圾；
                                                     # 真正的相关性判定靠 LLM 引用标注，见 qa_handler）
 
-# ---------- 检索模式（论文第 6 章对比实验开关） ----------
+# ---------- 检索模式（对比实验开关） ----------
 # hybrid：BM25 关键词 + 向量语义两路召回，RRF 融合（默认，实测命中率显著高于纯向量）
 # vector：纯向量检索（对比实验基线）
 RETRIEVAL_MODE = os.getenv("RETRIEVAL_MODE", "hybrid")

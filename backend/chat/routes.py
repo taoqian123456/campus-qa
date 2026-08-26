@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from auth.deps import get_current_user
+from config import LLM_PROVIDER, LLM_PROVIDERS
 from database import get_db
 from models import ChatSession, Message, User
 from qa.qa_handler import answer_question, answer_question_stream, recommend_questions
@@ -24,9 +25,22 @@ class SessionCreate(BaseModel):
 
 class MessageCreate(BaseModel):
     """发送消息。history 可选：前端带上当前会话最近几轮对话（[{"question","answer"}]），
-    不带时后端从 messages 表查。前端传来的历史会以服务端库中记录为准做校验/补全。"""
+    不带时后端从 messages 表查。前端传来的历史会以服务端库中记录为准做校验/补全。
+    provider 可选：指定本次回答用的模型厂商（前端顶栏下拉框），空/不传走默认。"""
     question: str = Field(..., min_length=1, max_length=2000)
     history: list[dict] | None = None
+    provider: str | None = None
+
+
+def _resolve_provider(provider: str | None) -> str:
+    """校验并解析本次请求使用的模型厂商：空 -> 默认厂商（.env 的 LLM_PROVIDER）；
+    不在注册表里 -> 400 并提示可选列表。返回规范化后的厂商 key。"""
+    p = (provider or "").strip()
+    if not p:
+        return LLM_PROVIDER
+    if p not in LLM_PROVIDERS:
+        raise HTTPException(status_code=400, detail=f"不支持的模型 '{p}'，可选：{'、'.join(LLM_PROVIDERS)}")
+    return p
 
 
 class BatchDelete(BaseModel):
@@ -50,6 +64,7 @@ def _message_out(m: Message) -> dict:
         "id": m.id,
         "role": m.role,
         "content": m.content,
+        "provider": m.provider or "deepseek",
         "created_at": m.created_at,
         "feedback": m.reply_feedback,
         "reason": m.reply_reason,
@@ -76,6 +91,19 @@ def _history_pairs(session_id: int, db: Session) -> list[dict]:
         elif m.role == "assistant" and pairs:
             pairs[-1]["answer"] = m.content
     return pairs
+
+
+@router.get("/models")
+def list_models(current_user: User = Depends(get_current_user)):
+    """可用模型列表（注册表 LLM_PROVIDERS -> 下拉框选项），登录后可调用。
+
+    前端优先展示用户上次的选择（localStorage），没有时用默认模型；列表内容由服务端
+    统一维护，前端不写死厂商名单。
+    """
+    return {
+        "models": [{"id": k, "label": v["label"]} for k, v in LLM_PROVIDERS.items()],
+        "default": LLM_PROVIDER,
+    }
 
 
 @router.get("/recommend")
@@ -167,15 +195,16 @@ def send_message(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """发送问题：RAG 检索 + DeepSeek 生成回答，问题和答案都写入 messages 表。"""
+    """发送问题：RAG 检索 + 大模型生成回答，问题和答案都写入 messages 表。"""
     session = _get_owned_session(session_id, current_user, db)
+    provider = _resolve_provider(body.provider)
 
     # 历史优先用服务端库中记录（权威、不受前端篡改）；库为空时退回前端传的（无历史会话/刚恢复登录时）
     history = _history_pairs(session_id, db) or (body.history or [])
-    result = answer_question(body.question, history=history)
+    result = answer_question(body.question, history=history, provider=provider)
 
     db.add(Message(session_id=session.id, role="user", content=body.question))
-    ai_msg = Message(session_id=session.id, role="assistant", content=result["answer"])
+    ai_msg = Message(session_id=session.id, role="assistant", content=result["answer"], provider=provider)
     db.add(ai_msg)
     db.commit()
     db.refresh(ai_msg)  # 取到自增 id，前端点赞需要 message_id
@@ -183,6 +212,7 @@ def send_message(
         "answer": result["answer"],
         "sources": result["sources"],
         "confidence": result["confidence"],
+        "provider": provider,
         "message_id": ai_msg.id,
     }
 
@@ -196,18 +226,21 @@ def send_message_stream(
 ):
     """流式问答（SSE）：LLM 用 stream=True 逐块推送，结束后完整答案写入 messages 表。
 
+    provider 校验在流开始前做（非法值直接 400，避免 HTTP 200 + SSE 里夹错误事件的尴尬）。
+
     事件格式（每行 data: JSON）：
       {"type": "token", "content": "..."}   增量文本
-      {"type": "done", "answer": "...", "sources": [...]}  流结束
+      {"type": "done", "answer": "...", "sources": [...], "provider": "..."}  流结束
       {"type": "error", "message": "..."}   生成失败
     """
     session = _get_owned_session(session_id, current_user, db)
+    provider = _resolve_provider(body.provider)
     history = _history_pairs(session_id, db) or (body.history or [])
 
     def sse_events():
         # 依赖 get_db 的会话在流期间保持存活（同步 def 路由），
         # done 之后才写库并关闭，流提前中断由 get_db 兜底关闭
-        yield from _sse_yield(db, session.id, body.question, history)
+        yield from _sse_yield(db, session.id, body.question, history, provider)
 
     return StreamingResponse(
         sse_events(),
@@ -217,18 +250,18 @@ def send_message_stream(
     )
 
 
-def _sse_yield(db: Session, session_id: int, question: str, history: list[dict]):
-    """把 answer_question_stream 的字典事件转成 SSE 帧，并在 done 时落库。
+def _sse_yield(db: Session, session_id: int, question: str, history: list[dict], provider: str):
+    """把 answer_question_stream 的字典事件转成 SSE 帧，并在 done 时落库（含模型厂商）。
 
     落库后把 assistant 消息的自增 id 追加到 done 事件（message_id），前端点赞需要它。
     """
     answer = ""
     done_event = None
     try:
-        for event in answer_question_stream(question, history=history):
+        for event in answer_question_stream(question, history=history, provider=provider):
             if event["type"] == "done":
                 answer = event["answer"]
-                done_event = dict(event)  # 复制一份，落库后补充 message_id
+                done_event = dict(event)  # 复制一份，落库后补充 message_id 与 provider
                 continue  # done 事件延后发送：先拿到 message_id
             yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
     except Exception as e:
@@ -240,12 +273,13 @@ def _sse_yield(db: Session, session_id: int, question: str, history: list[dict])
         try:
             if answer:
                 db.add(Message(session_id=session_id, role="user", content=question))
-                ai_msg = Message(session_id=session_id, role="assistant", content=answer)
+                ai_msg = Message(session_id=session_id, role="assistant", content=answer, provider=provider)
                 db.add(ai_msg)
                 db.commit()
                 db.refresh(ai_msg)
                 if done_event is not None:
                     done_event["message_id"] = ai_msg.id
+                    done_event["provider"] = provider
         finally:
             db.close()
     if done_event is not None:

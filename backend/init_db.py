@@ -4,7 +4,7 @@
 
 对已有库做轻量迁移（SQLite 简单方案）：
 - 新表用 SQLAlchemy create_all 直接建；
-- messages 表新增列（reply_feedback / reply_reason）用 PRAGMA table_info 检查后
+- messages 表新增列（reply_feedback / reply_reason / provider）用 PRAGMA table_info 检查后
   ALTER TABLE ADD COLUMN 补齐，无需重建表、不丢数据。
 """
 from sqlalchemy import inspect, text
@@ -21,6 +21,8 @@ def migrate_add_columns():
         "messages": {
             "reply_feedback": "VARCHAR(10)",
             "reply_reason": "VARCHAR(200)",
+            # 模型厂商列：旧库补列时带上与模型一致的默认值（老消息统一归到 deepseek）
+            "provider": "VARCHAR(30) NOT NULL DEFAULT 'deepseek'",
         },
         "documents": {
             "chunk_count": "INTEGER NOT NULL DEFAULT 0",

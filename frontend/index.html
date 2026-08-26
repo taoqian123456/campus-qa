@@ -95,6 +95,22 @@ body {
 }
 .topbar-right { display: flex; align-items: center; gap: 16px; }
 .username { color: #5a6b85; font-size: 14px; display: flex; align-items: center; gap: 5px; }
+/* 顶栏模型下拉框：透明融入顶栏，focus/hover 时浮出白底 */
+.model-select { width: 148px; }
+.model-select .el-select__wrapper {
+  background: transparent; border: 1px solid transparent;
+  box-shadow: none !important;
+}
+.model-select .el-select__wrapper:hover,
+.model-select .el-select__wrapper.is-focused {
+  background: #fff; border-color: #e6ebf2;
+  box-shadow: var(--shadow-soft) !important;
+}
+/* 回答下方的模型名小字（AI 回答/时间戳下方） */
+.msg-provider {
+  font-size: 11px; color: #b3bdce; margin-top: 4px; user-select: none;
+}
+.msg-provider .el-icon { vertical-align: -1px; margin-right: 2px; }
 
 .chat-body { flex: 1; display: flex; min-height: 0; }
 
@@ -562,6 +578,10 @@ body {
         <span>高校学生事务智能问答系统</span>
       </div>
       <div class="topbar-right">
+        <el-select v-model="preferredProvider" class="model-select" size="small" @change="onProviderChange">
+          <template #prefix><el-icon><magic-stick /></el-icon></template>
+          <el-option v-for="m in modelOptions" :key="m.id" :label="m.label" :value="m.id" />
+        </el-select>
         <el-button v-if="isAdmin" :type="adminView ? 'primary' : 'default'" @click="toggleAdmin">
           <el-icon><setting /></el-icon>&nbsp;管理后台
         </el-button>
@@ -677,6 +697,9 @@ body {
                   </span>{{ m.content || (m.typing ? '' : ' ') }}<span v-if="m.typing" class="cursor">▍</span>
                 </div>
                 <div v-if="m.time" class="msg-time">{{ m.time }}</div>
+                <div v-if="m.role === 'assistant' && !m.typing && m.providerLabel" class="msg-provider">
+                  <el-icon><magic-stick /></el-icon>由 {{ m.providerLabel }} 生成
+                </div>
                 <div v-if="m.role === 'assistant' && !m.typing" class="msg-feedback">
                   <span :class="['fb-btn', 'up', m.feedback === 'up' && 'active']" @click="sendFeedback(m, 'up')">👍 有帮助</span>
                   <span :class="['fb-btn', 'down', m.feedback === 'down' && 'active']" @click="sendFeedback(m, 'down')">👎 没帮助</span>
@@ -892,6 +915,12 @@ const app = createApp({
       inputText: '',
       sending: false,
       selectedSessions: [],   // 会话多选：勾选的会话 id 列表
+
+      // 模型选择（顶栏下拉框）：选项来自后端 /api/chat/models（服务端注册表），
+      // 用户选择存 localStorage 键名 preferredProvider，刷新后保留
+      modelOptions: [],
+      preferredProvider: localStorage.getItem('preferredProvider') || '',
+      providerDirty: false,  // 手动切换后置位：真正切换时才提示（登录时静默恢复不算切换）
       // 空会话引导页的 3 个领域示例问题（写死，覆盖知识库主要主题）
       sampleQuestions: [
         '转专业需要什么条件？',
@@ -961,6 +990,7 @@ const app = createApp({
         localStorage.setItem('qa_role', this.role);
       }).catch(() => {});
       this.loadSessions();
+      this.loadModels();
     }
   },
 
@@ -1119,6 +1149,7 @@ const app = createApp({
         localStorage.setItem('qa_username', username);
         localStorage.setItem('qa_role', this.role);
         this.loadSessions();
+        this.loadModels();
       } catch (e) {
         this.$message.error(e.message);
       } finally {
@@ -1143,6 +1174,39 @@ const app = createApp({
       this.adminDocs = [];
       this.adminUsers = [];
       this.hotwords = [];
+    },
+
+    /* ---------- 模型选择（顶栏下拉框） ---------- */
+    // provider id（如 deepseek/zhipu）-> 展示名（如 DeepSeek/智谱 GLM），消息小字与切换提示共用
+    providerLabel(id) {
+      const m = this.modelOptions.find(o => o.id === id);
+      return m ? m.label : id;
+    },
+    // 拉取模型列表（服务端注册表）；登录后调用。失败静默：下拉框为空不阻塞提问，
+    // 后端对不传 provider 走默认模型，功能不受影响
+    async loadModels() {
+      try {
+        const res = await this.api('/api/chat/models');
+        const d = await res.json();
+        this.modelOptions = d.models || [];
+        // localStorage 里的选择已不在服务端注册表中（如部署环境变了）：回落默认
+        if (!this.modelOptions.some(o => o.id === this.preferredProvider)) {
+          this.preferredProvider = d.default || (this.modelOptions[0] && this.modelOptions[0].id) || '';
+          try { localStorage.removeItem('preferredProvider'); } catch (e) {}
+        }
+      } catch (e) { /* 静默：下拉框为空，提问仍走后端默认 */ }
+    },
+    // 切换模型：存 localStorage + 提示"已切换到 xx"。
+    // el-select 的 change 只在用户操作时触发，登录恢复（v-model 赋值）不会走到这里，
+    // providerDirty 用于登录后初次加载列表时静默对齐、不弹提示
+    onProviderChange(val) {
+      if (!val) return;
+      try { localStorage.setItem('preferredProvider', val); } catch (e) {}
+      if (this.providerDirty) {
+        this.$message.success(`已切换到「${this.providerLabel(val)}」，后续提问将使用该模型`);
+      } else {
+        this.providerDirty = true;  // 首次（登录后恢复）不提示，之后的切换才提示
+      }
     },
 
     /* ---------- 会话 ---------- */
@@ -1175,6 +1239,7 @@ const app = createApp({
           sources: [], recommends: [], confidence: '',
           time: this.formatMsgTime(m.created_at),
           id: m.id, feedback: m.feedback || '', feedbackReason: m.reason || '',
+          providerLabel: m.role === 'assistant' ? this.providerLabel(m.provider) : '',
           typing: false,
         }));
         this.scrollToBottom();
@@ -1314,13 +1379,15 @@ const app = createApp({
       // 关键：必须用 reactive() 包一层再存引用。若保存普通对象并在定时器里直接改它，
       // 修改会绕过 Vue 的响应式代理，界面不刷新——表现为一直"正在思考"，
       // 直到输入框打字触发一次无关的重新渲染才冒出整段答案。
-      const aiMsg = Vue.reactive({ role: 'assistant', content: '', sources: [], recommends: [], confidence: '', time: this.formatMsgTime(nowIso), id: null, feedback: '', feedbackReason: '', typing: true });
+      const aiMsg = Vue.reactive({ role: 'assistant', content: '', sources: [], recommends: [], confidence: '', time: this.formatMsgTime(nowIso), id: null, feedback: '', feedbackReason: '', providerLabel: '', typing: true });
       this.messages.push(aiMsg);
       this.sending = true;
       this.scrollToBottom();
 
-      // 带最近 3 轮历史（后端仅用于理解"它/那"等指代；服务端有库中记录时以其为准）
+      // 带最近 3 轮历史（后端仅用于理解"它/那"等指代；服务端有库中记录时以其为准）；
+      // provider 为空时不传，后端走 .env 默认模型
       const body = { question, history: this.buildHistory() };
+      if (this.preferredProvider) body.provider = this.preferredProvider;
 
       const seq = ++this.streamSeq;
       this.typingBuf = '';
@@ -1502,12 +1569,15 @@ const app = createApp({
           msg.sources = [];
           msg.confidence = this.pendingDone.confidence || '低';
           msg.id = this.pendingDone.message_id || null;  // 反馈需要消息 id
+          msg.providerLabel = this.providerLabel(this.pendingDone.provider) || msg.providerLabel;
           this.finishStream(msg, seq, null, false);
         } else if (this.pendingDone) {
           msg.content = this.pendingDone.answer;       // 收尾：与后端完整答案一致
           msg.sources = this.pendingDone.sources || [];
           msg.confidence = this.pendingDone.confidence || '低';
           msg.id = this.pendingDone.message_id || null;  // 反馈需要消息 id
+          // 本次回答实际使用的模型（以后端返回为准；切换会话从库里读历史时同样展示）
+          msg.providerLabel = this.providerLabel(this.pendingDone.provider) || msg.providerLabel;
           this.finishStream(msg, seq, null, this.pendingDone.relevant === true);
         } else if (!msg.typing) {
           clearInterval(this.typingTimer);             // 出错后停止
