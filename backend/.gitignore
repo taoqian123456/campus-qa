@@ -2,7 +2,8 @@
 __pycache__/
 *.pyc
 venv/
-.env
+.env*
+!.env.example
 
 # 数据库与索引（本地生成物，不入库）
 *.db
