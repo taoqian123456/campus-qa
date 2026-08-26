@@ -12,3 +12,10 @@ uploads/
 # 编辑器
 .vscode/
 .idea/
+
+# 评测/实验产出（写论文用，本地保留，不入库；脚本在仓库中可复现）
+eval_results_*.csv
+eval_results_*.xlsx
+*_复核.xlsx
+perf_results.csv
+评分汇总.txt
