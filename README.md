@@ -9,6 +9,7 @@
 [![Vue](https://img.shields.io/badge/Vue-3.4-42b883.svg)](https://vuejs.org/)
 [![FAISS](https://img.shields.io/badge/FAISS-CPU-orange.svg)](https://github.com/facebookresearch/faiss)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ed.svg)](https://www.docker.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Graduation%20Project-ff69b4.svg)]()
 
 *学生查政策总是一头雾水？让 AI 基于学校真实政策文件，给出**带来源、可追溯**的回答。*
@@ -222,3 +223,5 @@ campus-qa/
 ## 📄 说明
 
 本项目为《基于大语言模型与向量检索的高校学生事务智能问答系统设计与实现》，代码仅供学习交流。知识库中的政策文件版权归原发布单位所有。
+
+代码基于 [MIT License](LICENSE) 开源，欢迎 Star ⭐ 与 Issue 交流。
