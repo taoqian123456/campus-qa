@@ -52,9 +52,7 @@
 |:---:|:---:|:---:|
 | ![智能兜底](docs/screenshots/fallback.png) | ![管理后台](docs/screenshots/admin.png) | ![主题设置](docs/screenshots/theme.png) |
 
-</div>
 
-> 截图放置规范见 `docs/screenshots/说明.txt`（分辨率 1280×800，png 格式）。
 
 ## 🏗️ 系统架构
 
