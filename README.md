@@ -41,13 +41,19 @@
 
 ## 📸 界面预览
 
-> 在 `docs/screenshots/` 目录放置以下截图（建议分辨率 1280×800）：
-> 
-> - `login.png` 登录注册页
-> - `chat.png` 聊天页（流式回答 + 来源标签 + 相关度徽章）
-> - `fallback.png` 智能兜底三段式回复 + 推荐追问
-> - `admin.png` 管理后台（文档/用户/热词/体检/反馈统计）
-> - `theme.png` 主题面板（背景图 + 色板）
+<div align="center">
+
+| 登录注册 | 智能问答 |
+|:---:|:---:|
+| ![登录注册页](docs/screenshots/login.png) | ![聊天页](docs/screenshots/chat.png) |
+
+| 智能兜底与推荐追问 | 管理后台 | 主题面板 |
+|:---:|:---:|:---:|
+| ![智能兜底](docs/screenshots/fallback.png) | ![管理后台](docs/screenshots/admin.png) | ![主题设置](docs/screenshots/theme.png) |
+
+</div>
+
+> 截图放置规范见 `docs/screenshots/说明.txt`（分辨率 1280×800，png 格式）。
 
 ## 🏗️ 系统架构
 
