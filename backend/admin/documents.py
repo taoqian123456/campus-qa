@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from auth.deps import get_current_user
+from auth.deps import require_admin
 from config import UPLOAD_DIR
 from database import get_db
 from models import Document, User
@@ -20,16 +20,6 @@ router = APIRouter(prefix="/api/admin/documents", tags=["管理端-知识库"])
 
 # 允许上传的格式（P3 建索引时用 qa.knowledge_base.extract_text 解析）
 ALLOWED_SUFFIXES = {".pdf", ".txt", ".docx"}
-
-
-def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """admin 专属依赖：非 admin 返回 403。"""
-    if current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="无权限：仅管理员可操作",
-        )
-    return current_user
 
 
 @router.post("/upload", status_code=201)

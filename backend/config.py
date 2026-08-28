@@ -30,6 +30,10 @@ FAISS_INDEX_DIR.mkdir(exist_ok=True)
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-change-me")
 ACCESS_TOKEN_EXPIRE_DAYS = 7   # JWT 有效期（天）
 
+# 管理员注册密令（首次初始化时哈希后写入 site_settings；留空 = 密令功能关闭）
+# 用户注册时填对该密令 -> role=admin，不填 -> 普通 user，填错 -> 400
+ADMIN_INVITE_CODE = os.getenv("ADMIN_INVITE_CODE", "")
+
 # ---------- DeepSeek API（在 .env 里配置） ----------
 DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")

@@ -1,11 +1,11 @@
 """
-数据表模型（4 张核心表）：
-users 用户 / sessions 会话 / messages 消息 / documents 知识库文档
+数据表模型（5 张核心表）：
+users 用户 / sessions 会话 / messages 消息 / documents 知识库文档 / site_settings 系统设置
 注意：会话类名用 ChatSession（避免和 SQLAlchemy 的 Session 混淆）。
 """
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -17,7 +17,9 @@ class User(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     username: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), default="user")  # user / admin
+    # 三级角色：user 普通用户 / admin 管理员（密令注册）/ superadmin 超级管理员（create_admin.py 创建）
+    role: Mapped[str] = mapped_column(String(20), default="user")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)  # 预留：禁用用户（False 时拒绝登录）
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
@@ -57,3 +59,18 @@ class Document(Base):
     # 知识库体检：分块数（索引重建时同步）与检索命中次数（每次问答 top-k 命中时累加）
     chunk_count: Mapped[int] = mapped_column(default=0)
     hit_count: Mapped[int] = mapped_column(default=0)
+
+
+class SiteSetting(Base):
+    """系统设置键值表：如 invite_code_hash（管理员注册密令的 bcrypt 哈希）"""
+
+    __tablename__ = "site_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    key: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)
+    value: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+# 管理员注册密令在 site_settings 里的 key（init_db / auth / admin.settings 共用）
+INVITE_CODE_KEY = "invite_code_hash"

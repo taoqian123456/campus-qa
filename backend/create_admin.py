@@ -1,8 +1,8 @@
 """
-创建管理员账号（可单独运行）。
+创建超级管理员账号（可单独运行）。
 
 用法：venv\\Scripts\\python.exe create_admin.py
-交互式输入用户名和密码（密码不回显），role='admin'。
+交互式输入用户名和密码（密码不回显），role='superadmin'。
 用户名已存在时报错退出，不覆盖已有账号。
 """
 import getpass
@@ -19,7 +19,7 @@ MIN_PASSWORD_LEN = 6
 
 
 def main():
-    username = input("管理员用户名: ").strip()
+    username = input("超级管理员用户名: ").strip()
     if not username:
         print("❌ 用户名不能为空")
         sys.exit(1)
@@ -39,11 +39,13 @@ def main():
             print("❌ 两次输入的密码不一致")
             sys.exit(1)
 
-        user = User(username=username, hashed_password=hash_password(password), role="admin")
+        # 第一个管理员 = 超级管理员（superadmin），保证系统至少有一个超管；
+        # 后续管理员走注册密令（ADMIN_INVITE_CODE）成为普通 admin
+        user = User(username=username, hashed_password=hash_password(password), role="superadmin")
         db.add(user)
         db.commit()
         db.refresh(user)
-        print(f"✅ 管理员 {username} 创建成功（id={user.id}, role={user.role}）")
+        print(f"✅ 超级管理员 {username} 创建成功（id={user.id}, role={user.role}）")
     finally:
         db.close()
 

@@ -75,6 +75,7 @@ body {
   height: 2px; background: var(--theme-grad); border-radius: 2px;
 }
 .auth-field { margin-bottom: 16px; }
+.auth-error { margin-bottom: 16px; }
 .auth-btn { width: 100%; margin-top: 6px; }
 .auth-tip { margin-top: 18px; text-align: center; color: #98a3b3; font-size: 13px; }
 .auth-tip a { color: var(--el-color-primary); cursor: pointer; margin-left: 4px; transition: color var(--transition-fast); }
@@ -531,6 +532,16 @@ body {
 }
 .admin-empty { text-align: center; color: #b6c2d2; padding: 50px 0; font-size: 14px; }
 .hotword-cloud { display: flex; flex-wrap: wrap; gap: 12px; padding: 6px 0 4px; }
+/* 系统设置：密令管理 */
+.settings-card {
+  background: #fff; border: 1px solid #e6ebf2; border-radius: var(--radius-card);
+  padding: 22px 24px; margin-bottom: 16px;
+}
+.settings-card-title { font-size: 15px; font-weight: 600; color: #33415c; margin-bottom: 14px; }
+.invite-status { margin-bottom: 14px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.invite-row { display: flex; gap: 12px; }
+.invite-input { max-width: 360px; }
+.invite-note { margin-top: 12px; font-size: 12.5px; color: #98a3b3; }
 </style>
 </head>
 <body>
@@ -544,8 +555,8 @@ body {
         <span>高校学生事务智能问答系统</span>
       </div>
       <div class="auth-tabs">
-        <div :class="['auth-tab', authMode === 'login' && 'active']" @click="authMode = 'login'">登 录</div>
-        <div :class="['auth-tab', authMode === 'register' && 'active']" @click="authMode = 'register'">注 册</div>
+        <div :class="['auth-tab', authMode === 'login' && 'active']" @click="switchAuthMode('login')">登 录</div>
+        <div :class="['auth-tab', authMode === 'register' && 'active']" @click="switchAuthMode('register')">注 册</div>
       </div>
       <el-input v-model="authForm.username" placeholder="用户名" size="large" class="auth-field" @keydown.enter="doAuth">
         <template #prefix><el-icon><user /></el-icon></template>
@@ -558,12 +569,21 @@ body {
                 size="large" class="auth-field" show-password @keydown.enter="doAuth">
         <template #prefix><el-icon><key /></el-icon></template>
       </el-input>
+      <div v-if="authMode === 'register'" class="auth-field">
+        <el-tooltip content="填写正确的密令可直接注册为管理员；不填则注册普通用户" placement="top">
+          <el-input v-model="authForm.invite_code" type="password" placeholder="管理员密令（选填）"
+                    size="large" show-password @keydown.enter="doAuth">
+            <template #prefix><el-icon><lock /></el-icon></template>
+          </el-input>
+        </el-tooltip>
+      </div>
+      <el-alert v-if="authError" :title="authError" type="error" show-icon :closable="false" class="auth-error"></el-alert>
       <el-button type="primary" size="large" class="auth-btn" :loading="authLoading" @click="doAuth">
         {{ authMode === 'login' ? '登 录' : '注 册' }}
       </el-button>
       <div class="auth-tip">
         {{ authMode === 'login' ? '还没有账号？' : '已有账号？' }}
-        <a @click="authMode = authMode === 'login' ? 'register' : 'login'">
+        <a @click="switchAuthMode(authMode === 'login' ? 'register' : 'login')">
           {{ authMode === 'login' ? '去注册' : '去登录' }}
         </a>
       </div>
@@ -580,7 +600,7 @@ body {
       <div class="topbar-right">
         <el-select v-model="preferredProvider" class="model-select" size="small" @change="onProviderChange">
           <template #prefix><el-icon><magic-stick /></el-icon></template>
-          <el-option v-for="m in modelOptions" :key="m.id" :label="m.label" :value="m.id" />
+          <el-option v-for="m in modelOptions" :key="m.id" :label="m.label" :value="m.id"></el-option>
         </el-select>
         <el-button v-if="isAdmin" :type="adminView ? 'primary' : 'default'" @click="toggleAdmin">
           <el-icon><setting /></el-icon>&nbsp;管理后台
@@ -777,18 +797,52 @@ body {
           </el-tab-pane>
 
           <el-tab-pane label="用户管理" name="users">
+            <div class="fb-stats-cards" v-if="adminUsersStats">
+              <div class="fb-stat-card">
+                <div class="fb-stat-num" style="color:#33415c">{{ adminUsers.length }}</div>
+                <div class="fb-stat-label">总用户</div>
+              </div>
+              <div class="fb-stat-card">
+                <div class="fb-stat-num" style="color:#e6a23c">{{ adminUsersStats.admin_count }}</div>
+                <div class="fb-stat-label">管理员</div>
+              </div>
+              <div class="fb-stat-card">
+                <div class="fb-stat-num" style="color:#d9534f">{{ adminUsersStats.superadmin_count }}</div>
+                <div class="fb-stat-label">超级管理员</div>
+              </div>
+            </div>
             <el-table :data="adminUsers" v-loading="adminUsersLoading" empty-text="暂无用户">
-              <el-table-column prop="id" label="ID" width="70" ></el-table-column>
               <el-table-column prop="username" label="用户名" ></el-table-column>
               <el-table-column prop="role" label="角色" width="120">
                 <template #default="{ row }">
-                  <el-tag :type="row.role === 'admin' ? 'danger' : 'info'">{{ row.role }}</el-tag>
+                  <el-tag :type="roleTagType(row.role)">{{ roleLabel(row.role) }}</el-tag>
                 </template>
               </el-table-column>
               <el-table-column prop="created_at" label="注册时间" width="190" ></el-table-column>
-              <el-table-column label="操作" width="120">
+              <el-table-column prop="is_active" label="状态" width="90">
                 <template #default="{ row }">
-                  <el-button size="small" type="danger" :disabled="row.role === 'admin'"
+                  <el-tag :type="row.is_active ? 'success' : 'danger'">{{ row.is_active ? '正常' : '已禁用' }}</el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="260">
+                <template #default="{ row }">
+                  <el-dropdown v-if="isSuperadmin && row.role !== 'superadmin' && row.username !== username"
+                               size="small" trigger="click" @command="cmd => changeRole(row, cmd)">
+                    <el-button size="small">改角色<el-icon><arrow-down /></el-icon></el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="admin" :disabled="row.role === 'admin'">设为管理员</el-dropdown-item>
+                        <el-dropdown-item command="user" :disabled="row.role === 'user'">设为普通用户</el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
+                  <el-button v-if="row.role !== 'superadmin' && row.username !== username"
+                             size="small" :type="row.is_active ? 'warning' : 'success'"
+                             @click="toggleStatus(row)">
+                    {{ row.is_active ? '禁用' : '启用' }}
+                  </el-button>
+                  <el-button size="small" type="danger"
+                             :disabled="row.role === 'superadmin' || (row.role === 'admin' && !isSuperadmin) || row.username === username"
                              @click="deleteUser(row)">删除</el-button>
                 </template>
               </el-table-column>
@@ -881,6 +935,22 @@ body {
               <el-table-column prop="count" label="次数" width="120"></el-table-column>
             </el-table>
           </el-tab-pane>
+
+          <el-tab-pane v-if="isSuperadmin" label="系统设置" name="settings">
+            <div class="settings-card">
+              <div class="settings-card-title">管理员注册密令</div>
+              <div class="invite-status">
+                当前状态：<el-tag v-if="inviteEnabled !== null" :type="inviteEnabled ? 'success' : 'info'">{{ inviteEnabled ? '已开启' : '未开启' }}</el-tag>
+                <span v-else class="hint">加载中…</span>
+              </div>
+              <div class="invite-row">
+                <el-input v-model="inviteCodeInput" type="password" placeholder="留空并保存 = 关闭密令注册"
+                          size="large" show-password class="invite-input"></el-input>
+                <el-button type="primary" :loading="inviteSaving" @click="saveInviteCode">保存密令</el-button>
+              </div>
+              <div class="invite-note">注册时填写密令的用户将自动成为管理员，密令仅以加密形式存储</div>
+            </div>
+          </el-tab-pane>
         </el-tabs>
       </div>
     </div>
@@ -905,7 +975,8 @@ const app = createApp({
 
       // 登录/注册
       authMode: 'login',
-      authForm: { username: '', password: '', confirm: '' },
+      authForm: { username: '', password: '', confirm: '', invite_code: '' },
+      authError: '',        // 登录/注册表单错误（显示在表单下方 el-alert）
       authLoading: false,
 
       // 会话与消息
@@ -959,7 +1030,11 @@ const app = createApp({
       adminDocsLoading: false,
       rebuildLoading: false,
       adminUsers: [],
+      adminUsersStats: null,
       adminUsersLoading: false,
+      inviteEnabled: null,   // null=未加载；true=密令已开启
+      inviteCodeInput: '',
+      inviteSaving: false,
       hotwords: [],
       hotwordsLoading: false,
       // 回答反馈
@@ -976,7 +1051,8 @@ const app = createApp({
   },
   computed: {
     loggedIn() { return !!this.token; },
-    isAdmin() { return this.role === 'admin'; },
+    isAdmin() { return this.role === 'admin' || this.role === 'superadmin'; },
+    isSuperadmin() { return this.role === 'superadmin'; },
     allSessionsSelected() {
       return this.sessions.length > 0 && this.selectedSessions.length === this.sessions.length;
     },
@@ -1122,6 +1198,7 @@ const app = createApp({
     /* ---------- 登录 / 注册 ---------- */
     async doAuth() {
       const { username, password, confirm } = this.authForm;
+      this.authError = '';
       if (!username || !password) { this.$message.warning('请输入用户名和密码'); return; }
       if (this.authMode === 'register') {
         if (password.length < 6) { this.$message.warning('密码至少 6 位'); return; }
@@ -1130,16 +1207,17 @@ const app = createApp({
       this.authLoading = true;
       try {
         const path = this.authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
-        const res = await this.api(path, {
-          method: 'POST',
-          body: JSON.stringify({ username, password }),
-        });
+        const body = this.authMode === 'login'
+          ? { username, password }
+          : { username, password, invite_code: this.authForm.invite_code };
+        const res = await this.api(path, { method: 'POST', body: JSON.stringify(body) });
         const data = await res.json();
         if (this.authMode === 'register') {
           this.$message.success('注册成功，请登录');
-          this.authMode = 'login';
+          this.switchAuthMode('login');
           this.authForm.password = '';
           this.authForm.confirm = '';
+          this.authForm.invite_code = '';
           return;
         }
         this.token = data.access_token;
@@ -1151,10 +1229,18 @@ const app = createApp({
         this.loadSessions();
         this.loadModels();
       } catch (e) {
-        this.$message.error(e.message);
+        // 注册失败（密令错误/未开启、用户名重复等）在表单下方红色 alert 提示；
+        // 登录失败（含账号被禁用 403）用 message 提示
+        if (this.authMode === 'register') this.authError = e.message;
+        else this.$message.error(e.message);
       } finally {
         this.authLoading = false;
       }
+    },
+
+    switchAuthMode(mode) {
+      this.authMode = mode;
+      this.authError = '';
     },
 
     logout() {
@@ -1173,6 +1259,8 @@ const app = createApp({
       this.adminView = '';
       this.adminDocs = [];
       this.adminUsers = [];
+      this.adminUsersStats = null;
+      this.inviteEnabled = null;
       this.hotwords = [];
     },
 
@@ -1603,6 +1691,7 @@ const app = createApp({
         this.loadHotwords();
         this.loadFeedbackStats();
         this.loadKbHealth();
+        this.loadInviteSetting();
       } else {
         this.adminView = '';
       }
@@ -1724,11 +1813,84 @@ const app = createApp({
       this.adminUsersLoading = true;
       try {
         const res = await this.api('/api/admin/users');
-        this.adminUsers = await res.json();
+        const data = await res.json();
+        this.adminUsers = data.users || [];
+        this.adminUsersStats = data.stats || null;
       } catch (e) {
         this.$message.error(e.message);
       } finally {
         this.adminUsersLoading = false;
+      }
+    },
+
+    roleLabel(role) {
+      return { user: '普通用户', admin: '管理员', superadmin: '超级管理员' }[role] || role;
+    },
+    roleTagType(role) {
+      // 配色：superadmin=红、admin=橙、user=蓝
+      return { user: 'primary', admin: 'warning', superadmin: 'danger' }[role] || 'info';
+    },
+
+    async changeRole(row, cmd) {
+      const label = cmd === 'admin' ? '设为管理员' : '设为普通用户';
+      try {
+        await this.$confirm(`确定将「${row.username}」${label}？`, '提示', { type: 'warning' });
+      } catch (e) { return; }
+      try {
+        await this.api(`/api/admin/users/${row.id}/role`, { method: 'PATCH', body: JSON.stringify({ role: cmd }) });
+        this.$message.success(`${row.username} 已${label}`);
+        this.loadAdminUsers();
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    async toggleStatus(row) {
+      const action = row.is_active ? '禁用' : '启用';
+      try {
+        await this.$confirm(`确定${action}「${row.username}」？`, '提示', { type: 'warning' });
+      } catch (e) { return; }
+      try {
+        await this.api(`/api/admin/users/${row.id}/status`, { method: 'PATCH', body: JSON.stringify({ is_active: !row.is_active }) });
+        this.$message.success(`${row.username} 已${action}`);
+        this.loadAdminUsers();
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    async loadInviteSetting() {
+      if (!this.isSuperadmin) return;
+      try {
+        const res = await this.api('/api/admin/settings/invite');
+        this.inviteEnabled = (await res.json()).enabled;
+      } catch (e) {
+        this.$message.error(e.message);
+      }
+    },
+
+    async saveInviteCode() {
+      // 二次确认：留空保存会关闭密令注册
+      try {
+        await this.$confirm(
+          this.inviteCodeInput ? '确定保存新密令？保存后立即生效' : '密令为空，保存将关闭密令注册功能，确定？',
+          '提示', { type: 'warning' },
+        );
+      } catch (e) { return; }
+      this.inviteSaving = true;
+      try {
+        const res = await this.api('/api/admin/settings/invite', {
+          method: 'PUT',
+          body: JSON.stringify({ invite_code: this.inviteCodeInput }),
+        });
+        const data = await res.json();
+        this.$message.success(data.message || '密令已保存');
+        this.inviteEnabled = data.enabled;
+        this.inviteCodeInput = '';
+      } catch (e) {
+        this.$message.error(e.message);
+      } finally {
+        this.inviteSaving = false;
       }
     },
 

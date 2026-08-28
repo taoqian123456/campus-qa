@@ -7,7 +7,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from admin.documents import require_admin
+from auth.deps import require_admin
 from database import get_db
 from models import Document, User
 
